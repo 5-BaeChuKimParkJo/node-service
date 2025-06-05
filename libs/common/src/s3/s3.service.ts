@@ -63,7 +63,7 @@ export class S3Service {
     const region = this.configService.getOrThrow('AWS_REGION', { infer: true });
     const bucket = this.bucket;
 
-    return `http://localhost:9000/${bucket}/${key}`; // TODO: minio에서 테스트용임 나중에 지우기
+    return `http://localhost:9000/${bucket}/${key}`; // TODO: minio에서 테스트용임 나중에 지우기.
     // return `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
   };
 }
