@@ -23,7 +23,6 @@ RUN npm install -g pnpm
 RUN pnpm install --prod
 
 # Copy Prisma client and dist only
-COPY --from=development /usr/src/app/node_modules/.prisma /usr/src/app/node_modules/.prisma
 COPY --from=development /usr/src/app/node_modules/@prisma /usr/src/app/node_modules/@prisma
 COPY --from=development /usr/src/app/dist ./dist
 
