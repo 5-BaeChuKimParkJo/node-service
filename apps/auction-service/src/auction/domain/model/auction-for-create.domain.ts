@@ -38,7 +38,7 @@ export default class AuctionForCreateDomain {
       );
     }
 
-    if (add(input.startAt, { hours: 1 }) >= input.endAt) {
+    if (add(input.startAt, { hours: 1 }).getTime() > input.endAt.getTime()) {
       throw new AppException(
         { message: '경매 종료일은 시작일로부터 최소 1시간 이후여야 합니다.', code: ErrorCode.VALIDATION_ERROR },
         HttpStatus.BAD_REQUEST,
@@ -46,6 +46,7 @@ export default class AuctionForCreateDomain {
     }
 
     for (const { key } of input.images) {
+      console.log(key, key.startsWith(`auction/${user.userId}/images/`));
       if (!key.startsWith(`auction/${user.userId}/images/`)) {
         throw new AppException(
           { message: '이미지 키가 올바르지 않습니다.', code: ErrorCode.VALIDATION_ERROR },
