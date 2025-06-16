@@ -1,6 +1,6 @@
 import { z } from 'zod';
 export const envSchema = z.object({
-  DB_URL: z.string(),
+  MONGO_URL: z.string(),
 });
 
 export type EnvSchema = z.infer<typeof envSchema>;

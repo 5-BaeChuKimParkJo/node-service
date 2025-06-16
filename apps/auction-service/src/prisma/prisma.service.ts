@@ -1,5 +1,4 @@
 import { Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
-import versionMiddleware from './middleware/pessimistic-lock.middleware';
 import { PrismaClient } from './generated';
 
 @Injectable()
@@ -17,7 +16,6 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
 
   async onModuleInit() {
     await this.$connect();
-    this.$extends(versionMiddleware);
 
     // this.$on('query', (e) => {
     //   console.log('[PRISMA QUERY]', e.query, e.params);

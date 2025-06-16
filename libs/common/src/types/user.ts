@@ -1,4 +1,4 @@
 export type User = {
-  userId: string;
+  memberUuid: string;
   role: 'admin' | 'user';
 };

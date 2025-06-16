@@ -9,7 +9,6 @@ import AuctionForDeleteDomain from '../../../domain/model/auction-for-delete.dom
 import {
   AuctionBiddersReturn,
   AuctionsAdminReturn,
-  AuctionsArgs,
   AuctionsReturn,
 } from '../../../application/port/out/auction-repository.port.type';
 import AuctionBidderForCreateDomain from '../../../domain/model/auction-bidder-for-create.domain';
@@ -31,6 +30,8 @@ export class AuctionPrismaRepository extends AuctionRepositoryPort {
   constructor(private readonly prisma: PrismaService) {
     super();
     this.findAuction = this.findAuction.bind(this);
+    this.findAuctions = this.findAuctions.bind(this);
+    this.findAuctionsByIds = this.findAuctionsByIds.bind(this);
   }
 
   override transaction = async <T>(
@@ -223,6 +224,7 @@ export class AuctionPrismaRepository extends AuctionRepositoryPort {
             },
           },
         }),
+        version: { increment: 1 },
       },
     });
     return new AuctionDomain(auctionPropsSchema.parse({ ...rows, images: rows.auctionImages }));

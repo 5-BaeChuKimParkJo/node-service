@@ -10,7 +10,7 @@ export class CreateAuctionBidderDtoMapper {
   ): CreateAuctionBidderCommand => {
     return {
       auctionUuid,
-      bidderUuid: user.userId,
+      bidderUuid: user.memberUuid,
       bidAmount: BigInt(dto.bidAmount),
     };
   };

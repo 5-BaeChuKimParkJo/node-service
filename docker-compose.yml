@@ -17,6 +17,12 @@ services:
     depends_on:
       postgres-auction-service:
         condition: service_healthy
+      kafka1:
+        condition: service_healthy
+      kafka2:
+        condition: service_healthy
+      kafka3:
+        condition: service_healthy
 
   catalog-query-service:
     build:
@@ -31,16 +37,28 @@ services:
       - ./libs:/usr/src/app/libs
       - /usr/src/app/apps/catalog-query-service/src/prisma/generated
     env_file:
+      - ./libs/common/.env
       - ./apps/catalog-query-service/.env
     depends_on:
       - kafka-connect
+      - mongo
 
   mongo:
-    image: mongo:6
+    image: mongo:8
     ports:
       - '27017:27017'
     volumes:
       - ./volumes/mongo:/data/db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: rootpass
+      MONGO_INITDB_DATABASE: mydb
+    healthcheck:
+      test: ['CMD', 'mongosh', 'mongodb://root:rootpass@mongo:27017/admin', '--eval', 'db.adminCommand("ping")']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
 
   postgres-auction-service:
     image: postgres:17
@@ -64,23 +82,23 @@ services:
     image: bitnami/kafka:3.7.0
     restart: unless-stopped
     ports:
-      - '9092:9092'
-      - '10000:10000'
+      - '9092:9092' # PLAINTEXT
+      - '10000:10000' # EXTERNAL
     environment:
       - KAFKA_ENABLE_KRAFT=yes
       - KAFKA_CFG_BROKER_ID=0
       - KAFKA_CFG_NODE_ID=0
       - KAFKA_KRAFT_CLUSTER_ID=HsDBs9l6UUmQq7Y5E6bNlw
-      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@kafka1:9093,1@kafka2:9093,2@kafka3:9093
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@kafka1:19092,1@kafka2:19093,2@kafka3:19094
       - KAFKA_CFG_PROCESS_ROLES=controller,broker
-      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:10000
-      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka1:9092,EXTERNAL://kafka1:10000
-      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT
+      - KAFKA_CFG_LISTENERS=CONTROLLER://:19092,PLAINTEXT://:9092,EXTERNAL://:10000
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka1:9092,EXTERNAL://kafka1:10002
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
       - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
       - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=true
-      - KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR=2
-      - KAFKA_CFG_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=2
-      - KAFKA_CFG_TRANSACTION_STATE_LOG_MIN_ISR=2
+      - KAFKA_CFG_MESSAGE_FORMAT_VERSION=3.7
+      - KAFKA_CFG_INTER_BROKER_PROTOCOL_VERSION=3.7
+      - KAFKA_CFG_LOG_MESSAGE_FORMAT_VERSION=3.7
       - ALLOW_PLAINTEXT_LISTENER=yes
     volumes:
       - ./volumes/kafka1:/bitnami/kafka
@@ -102,21 +120,21 @@ services:
       - KAFKA_CFG_BROKER_ID=1
       - KAFKA_CFG_NODE_ID=1
       - KAFKA_KRAFT_CLUSTER_ID=HsDBs9l6UUmQq7Y5E6bNlw
-      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@kafka1:9093,1@kafka2:9093,2@kafka3:9093
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@kafka1:19092,1@kafka2:19093,2@kafka3:19094
       - KAFKA_CFG_PROCESS_ROLES=controller,broker
-      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:10000
-      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka2:9092,EXTERNAL://kafka2:10001
-      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT
+      - KAFKA_CFG_LISTENERS=CONTROLLER://:19093,PLAINTEXT://:9093,EXTERNAL://:10000
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka2:9093,EXTERNAL://kafka2:10003
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
       - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
       - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=true
-      - KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR=2
-      - KAFKA_CFG_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=2
-      - KAFKA_CFG_TRANSACTION_STATE_LOG_MIN_ISR=2
+      - KAFKA_CFG_MESSAGE_FORMAT_VERSION=3.7
+      - KAFKA_CFG_INTER_BROKER_PROTOCOL_VERSION=3.7
+      - KAFKA_CFG_LOG_MESSAGE_FORMAT_VERSION=3.7
       - ALLOW_PLAINTEXT_LISTENER=yes
     volumes:
       - ./volumes/kafka2:/bitnami/kafka
     healthcheck:
-      test: ['CMD', 'kafka-topics.sh', '--bootstrap-server', 'localhost:9092', '--list']
+      test: ['CMD', 'kafka-topics.sh', '--bootstrap-server', 'localhost:9093', '--list']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -133,21 +151,21 @@ services:
       - KAFKA_CFG_BROKER_ID=2
       - KAFKA_CFG_NODE_ID=2
       - KAFKA_KRAFT_CLUSTER_ID=HsDBs9l6UUmQq7Y5E6bNlw
-      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@kafka1:9093,1@kafka2:9093,2@kafka3:9093
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@kafka1:19092,1@kafka2:19093,2@kafka3:19094
       - KAFKA_CFG_PROCESS_ROLES=controller,broker
-      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:10000
-      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka3:9092,EXTERNAL://kafka3:10002
-      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT
+      - KAFKA_CFG_LISTENERS=CONTROLLER://:19094,PLAINTEXT://:9094,EXTERNAL://:10000
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka3:9094,EXTERNAL://kafka3:10004
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,EXTERNAL:PLAINTEXT
       - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
       - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=true
-      - KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR=2
-      - KAFKA_CFG_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=2
-      - KAFKA_CFG_TRANSACTION_STATE_LOG_MIN_ISR=2
+      - KAFKA_CFG_MESSAGE_FORMAT_VERSION=3.7
+      - KAFKA_CFG_INTER_BROKER_PROTOCOL_VERSION=3.7
+      - KAFKA_CFG_LOG_MESSAGE_FORMAT_VERSION=3.7
       - ALLOW_PLAINTEXT_LISTENER=yes
     volumes:
       - ./volumes/kafka3:/bitnami/kafka
     healthcheck:
-      test: ['CMD', 'kafka-topics.sh', '--bootstrap-server', 'localhost:9092', '--list']
+      test: ['CMD', 'kafka-topics.sh', '--bootstrap-server', 'localhost:9094', '--list']
       interval: 10s
       timeout: 5s
       retries: 5

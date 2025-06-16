@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "target": "es2017",
+    "module": "es6",
+    "lib": ["es2017"],
+    "types": ["k6"],
+    "strict": true,
+    "noEmitOnError": true,
+    "outDir": "./dist",
+    "esModuleInterop": true,
+    "moduleResolution": "node"
+  },
+  "include": ["src", "src/**/*.d.ts", "src/auction-service/auction-bidder-create-v1.ts"],
+  "exclude": ["node_modules", "dist"]
+}

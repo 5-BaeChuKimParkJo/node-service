@@ -19,7 +19,7 @@ export class PresignedUrlService extends PresignedUrlUseCase {
     if (!ext) {
       throw new AppException({ code: ErrorCode.INVALID_EXTENSION, message: '지원하지 않는 확장자 입니다' }, 400);
     }
-    const key = `auction/${user.userId}/images/${uuidv4()}.${ext}`;
+    const key = `auction/${user.memberUuid}/images/${uuidv4()}.${ext}`;
 
     return await this.auctionFileStoragePort.presignedUrl({
       contentType: command.contentType,

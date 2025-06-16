@@ -3,6 +3,12 @@
 /node_modules
 /build
 
+# k6
+/k6/dist
+/k6/node_modules
+/k6/metrics.json
+/k6-analyzer
+
 # Logs
 logs
 *.log

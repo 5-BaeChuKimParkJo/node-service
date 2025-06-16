@@ -17,6 +17,8 @@ import { AuctionBiddersUseCase } from '../port/in/auction-bidders.use-case';
 import { AuctionBiddersService } from './auction-bidders.service';
 import { AuctionsByIdsUseCase } from '../port/in/auctions-by-ids.use-case';
 import { AuctionsByIdsService } from './auctions-by-ids.service';
+import { CreateAuctionBidderKafkaService } from './create-auction-bidder-kafka.service';
+import { CreateAuctionBidderKafkaUseCase } from '../port/in/create-auction-bidder-kafka.use-case';
 
 export const auctionUseCaseProviders: Provider[] = [
   {
@@ -46,6 +48,10 @@ export const auctionUseCaseProviders: Provider[] = [
   {
     provide: CreateAuctionBidderUseCase,
     useClass: CreateAuctionBidderService,
+  },
+  {
+    provide: CreateAuctionBidderKafkaUseCase,
+    useClass: CreateAuctionBidderKafkaService,
   },
   {
     provide: AuctionBiddersUseCase,

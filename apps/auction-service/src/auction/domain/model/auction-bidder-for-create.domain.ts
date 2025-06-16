@@ -15,7 +15,7 @@ export default class AuctionBidderForCreateDomain {
   props: AuctionBidderForCreateProps;
 
   constructor(input: AuctionBidderForCreateArgs, user: User) {
-    if (input.sellerUuid === user.userId) {
+    if (input.sellerUuid === user.memberUuid) {
       throw new AppException(
         { message: '자신의 경매에는 입찰할 수 없습니다.', code: ErrorCode.VALIDATION_ERROR },
         HttpStatus.BAD_REQUEST,
@@ -31,7 +31,7 @@ export default class AuctionBidderForCreateDomain {
 
     const props: AuctionBidderForCreateProps = {
       ...input,
-      bidderUuid: user.userId,
+      bidderUuid: user.memberUuid,
     };
     this.props = auctionBidderForCreatePropsSchema.parse(props);
   }

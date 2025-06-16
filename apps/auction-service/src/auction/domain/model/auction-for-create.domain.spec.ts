@@ -22,7 +22,7 @@ describe('auction-for-create.domain', () => {
     };
     const dummyUser: User = {
       role: 'user',
-      userId: 'd84c1c39-1b5e-41b6-810d-9c8edff5f0f7',
+      memberUuid: 'd84c1c39-1b5e-41b6-810d-9c8edff5f0f7',
     };
     const startAt = set(add(new Date(), { years: 1 }), { minutes: 0, seconds: 0, milliseconds: 0 });
 

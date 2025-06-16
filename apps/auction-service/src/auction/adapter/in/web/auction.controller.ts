@@ -26,6 +26,8 @@ import { AuctionBiddersUseCase } from '../../../application/port/in/auction-bidd
 import { AuctionsByIdsItemResponseDto, AuctionsByIdsRequestDto } from './dto/auctions-by-ids.dto';
 import { AuctionsByIdsUseCase } from '../../../application/port/in/auctions-by-ids.use-case';
 import { AuctionsByIdsDtoMapper } from './mapper/auctions-by-ids-dto.mapper';
+import { CreateAuctionBidderKafkaDtoMapper } from './mapper/create-auction-bidder-kafka-dto.mapper';
+import { CreateAuctionBidderKafkaUseCase } from '../../../application/port/in/create-auction-bidder-kafka.use-case';
 
 @Controller('/auctions')
 export class AuctionController {
@@ -39,6 +41,7 @@ export class AuctionController {
     private readonly presignedUrlUseCase: PresignedUrlUseCase,
     private readonly auctionBiddersUseCase: AuctionBiddersUseCase,
     private readonly createAuctionBidderUseCase: CreateAuctionBidderUseCase,
+    private readonly createAuctionBidderKafkaUseCase: CreateAuctionBidderKafkaUseCase,
   ) {}
 
   @Version('1')
@@ -126,6 +129,18 @@ export class AuctionController {
   ): Promise<void> {
     const command = CreateAuctionBidderDtoMapper.toCommand(auctionUuid, requestDto, user);
     await this.createAuctionBidderUseCase.execute(command, user);
+  }
+
+  @Version('2')
+  @Post(':auctionUuid/bidders')
+  @ApiBearerAuth()
+  async createAuctionBidderV2(
+    @Param('auctionUuid') auctionUuid: string,
+    @JwtUser() user: User,
+    @Body() requestDto: CreateAuctionBidderRequestDto,
+  ): Promise<void> {
+    const command = CreateAuctionBidderKafkaDtoMapper.toCommand(auctionUuid, requestDto, user);
+    await this.createAuctionBidderKafkaUseCase.execute(command, user);
   }
 
   @Version('1')
