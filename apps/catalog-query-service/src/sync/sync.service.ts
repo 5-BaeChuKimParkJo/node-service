@@ -1,32 +1,36 @@
-import { Injectable } from '@nestjs/common';
-import { Auction, AuctionChangedValue } from './schema/auction-changed.schema';
+import { HttpStatus, Injectable } from '@nestjs/common';
 import * as F from 'fp-ts/function';
 import * as A from 'fp-ts/Array';
-import * as NEA from 'fp-ts/NonEmptyArray';
-import * as Ord from 'fp-ts/Ord';
-import * as Num from 'fp-ts/number';
-import * as E from 'fp-ts/Either';
 import * as O from 'fp-ts/Option';
-import * as TE from 'fp-ts/TaskEither';
-import * as Rec from 'fp-ts/Record';
-import { U } from '@app/common/utils/fp-ts';
+import * as E from 'fp-ts/Either';
+import { SyncFn } from './sync.fn';
+import { AuctionChangedValue } from '../../../../libs/common/src/schema/auction-changed.schema';
+import { AppException } from '@app/common/common/app.exception';
+import { ErrorCode } from '@app/common';
 
 @Injectable()
 export class SyncService {
-  changeAuction = async (auctionChangeds: AuctionChangedValue[]) => {
-    const aaa = F.pipe(
-      auctionChangeds,
-      A.map((o) => o.after),
-      A.filter((o) => o !== null),
-      NEA.fromArray,
-      O.map(NEA.max(U.Rec.ordBy('version', Num.Ord))),
-      TE.fromOption(() => 'no auction'),
-      TE.flatMap((auction) =>
-        F.pipe(
-          TE.Do,
-          TE.let('auction', () => auction),
-        ),
+  constructor(private readonly fn: SyncFn) {}
+
+  changeAuction = async (auctionChangedValues: AuctionChangedValue[]) => {
+    const data = await F.pipe(
+      auctionChangedValues,
+      A.findFirst((o) => o.op === 'd'),
+      O.match(
+        () => this.fn.upsertAuction(auctionChangedValues),
+        (o) => this.fn.deleteAcution(o.payload.auctionUuid),
       ),
-    );
+    )();
+
+    if (E.isLeft(data)) {
+      console.error(data.left);
+      throw new AppException(
+        {
+          code: ErrorCode.INTERNAL_VALIDATION_ERROR,
+          message: data.left,
+        },
+        HttpStatus.NOT_FOUND,
+      );
+    }
   };
 }

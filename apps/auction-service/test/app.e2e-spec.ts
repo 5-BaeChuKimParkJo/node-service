@@ -89,6 +89,7 @@ describe('AuctionService e2e', () => {
           thumbnailKey: `auction/e3edec89-224d-4d6a-8c55-347232da34c2/images/${i}`,
           title: `title-${i}`,
           minimumBid: 10000,
+          tagIds: [i],
           images: [
             {
               key: `auction/e3edec89-224d-4d6a-8c55-347232da34c2/images/${i}`,

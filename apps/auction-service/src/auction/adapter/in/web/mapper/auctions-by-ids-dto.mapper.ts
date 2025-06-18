@@ -30,6 +30,7 @@ export class AuctionsByIdsDtoMapper {
           thumbnailUrl: item.thumbnailUrl,
           createdAt: item.createdAt.toISOString(),
           sellerUuid: item.sellerUuid,
+          tagIds: item.tagIds,
           images: item.images.map(
             (image) =>
               ({

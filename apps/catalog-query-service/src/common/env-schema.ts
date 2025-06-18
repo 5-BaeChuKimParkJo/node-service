@@ -1,6 +1,17 @@
 import { z } from 'zod';
 export const envSchema = z.object({
   MONGO_URL: z.string(),
+  AUCTION_SERVICE_URL: z.string(),
+  CATALOG_QUERY_SERVICE_URL: z.string(),
+  CATALOG_BFF_SERVICE_URL: z.string(),
+  TAG_SERVICE: z.string(),
+  CATEGORY_SERVICE: z.string(),
+  CUPON_SERVICE: z.string(),
+  MEMBER_SERVICE: z.string(),
+  PRODUCT_SERVICE: z.string(),
+  REPORT_SERVICE: z.string(),
+  AUTH_SERVICE: z.string(),
+  SEARCH_SERVICE: z.string(),
 });
 
 export type EnvSchema = z.infer<typeof envSchema>;

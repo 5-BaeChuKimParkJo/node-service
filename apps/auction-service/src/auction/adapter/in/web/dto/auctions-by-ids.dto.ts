@@ -62,6 +62,9 @@ export class AuctionsByIdsItemResponseDto {
   @ApiProperty({ type: String })
   sellerUuid!: string;
 
+  @ApiProperty({ type: [Number] })
+  tagIds!: number[];
+
   @ApiProperty({ type: [AuctionsByIdsImageResponseDto] })
   images!: AuctionsByIdsImageResponseDto[];
 }

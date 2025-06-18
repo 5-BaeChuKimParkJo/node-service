@@ -13,6 +13,7 @@ export const auctionForCreatePropsSchema = auctionPropsSchema
     currentBid: true,
     thumbnailKey: true,
     sellerUuid: true,
+    tagIds: true,
   })
   .merge(
     auctionPropsSchema

@@ -29,6 +29,7 @@ export abstract class AuctionRepositoryPort {
 
   abstract findAuction(args: AuctionCommand): Promise<AuctionDomain>;
   abstract findAuction(args: AuctionAdminCommand): Promise<AuctionAdminDomain>;
+  abstract findAcutionCurrentBidderForUpdate: (auctionUuid: string, tx?: TX) => Promise<string | null>;
 
   abstract findAuctions(args: AuctionsCommand): Promise<AuctionsReturn>;
   abstract findAuctions(args: AuctionsAdminCommand): Promise<AuctionsAdminReturn>;
@@ -46,7 +47,12 @@ export abstract class AuctionRepositoryPort {
 
   abstract createAuctionBidder: (auctionBidder: AuctionBidderForCreateDomain, tx?: TX) => Promise<void>;
 
-  abstract updateAuctionCurrentBid: (auctionUuid: string, bidAmount: bigint, tx?: TX) => Promise<number>;
+  abstract updateAuctionCurrentBid: (
+    auctionUuid: string,
+    bidAmount: bigint,
+    bidderUuid: string,
+    tx?: TX,
+  ) => Promise<number>;
 
   abstract findAuctionBidders: (args: AuctionBiddersCommand) => Promise<AuctionBiddersReturn>;
 }

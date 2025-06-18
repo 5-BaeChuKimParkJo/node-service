@@ -27,6 +27,8 @@ export const auctionPropsSchema = z
     thumbnailKey: z.string(),
     createdAt: z.date(),
     sellerUuid: z.string().uuid({ message: '경매 UUID의 형식이 올바르지 않습니다.' }),
+    tagIds: z.array(z.number()),
+    version: z.number(),
     images: z
       .object({
         auctionImageId: z.bigint(),

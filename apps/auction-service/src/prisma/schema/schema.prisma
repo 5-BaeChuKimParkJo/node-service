@@ -35,6 +35,7 @@ model Auctions {
   description        String
   minimumBid         BigInt
   currentBid         BigInt
+  currentBidderUuid  String?
   startAt            DateTime         @db.Timestamptz(6)
   endAt              DateTime         @db.Timestamptz(6)
   isDirectDeal       Boolean
@@ -50,6 +51,7 @@ model Auctions {
   version   Int       @default(0)
 
   sellerUuid String @db.Uuid
+  tagIds     Int[]  @default([])
 
   auctionBidders AuctionBidders[]
   auctionImages  AuctionImages[]
@@ -86,4 +88,16 @@ model AuctionBidders {
   auction   Auctions @relation(fields: [auctionId], references: [auctionId])
 
   @@index([auctionId])
+}
+
+model Outbox {
+  id            String   @id @default(uuid()) @db.Uuid
+  aggregateType String
+  aggregateId   String
+  eventType     String
+  payload       Json
+  op            String   @db.Char(1)
+  createdAt     DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([aggregateType, aggregateId])
 }

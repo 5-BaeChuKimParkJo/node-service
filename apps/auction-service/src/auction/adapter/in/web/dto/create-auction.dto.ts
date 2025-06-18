@@ -39,6 +39,9 @@ export class CreateAuctionRequestDto {
   @ApiProperty({ type: Number })
   minimumBid!: number;
 
+  @ApiProperty({ type: [Number] })
+  tagIds!: number[];
+
   @ApiProperty({ type: [CreateAuctionImageRequestDto] })
   images!: CreateAuctionImageRequestDto[];
 }
@@ -99,6 +102,9 @@ export class CreateAuctionResponseDto {
 
   @ApiProperty({ type: String })
   sellerUuid!: string;
+
+  @ApiProperty({ type: [Number] })
+  tagIds!: number[];
 
   @ApiProperty({ type: [CreateAuctionImageResponseDto] })
   images!: CreateAuctionImageResponseDto[];

@@ -14,6 +14,7 @@ export type CreateAuctionResponse = {
   thumbnailUrl: string;
   createdAt: Date;
   sellerUuid: string;
+  tagIds: number[];
   images: {
     auctionImageId: bigint;
     url: string;

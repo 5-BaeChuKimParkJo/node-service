@@ -6,6 +6,8 @@ RUN mkdir -p /usr/share/java/debezium-connector-postgres
 ADD https://repo1.maven.org/maven2/io/debezium/debezium-connector-postgres/2.5.4.Final/debezium-connector-postgres-2.5.4.Final-plugin.tar.gz /tmp/debezium.tar.gz
 RUN tar -xzf /tmp/debezium.tar.gz -C /usr/share/java/debezium-connector-postgres --strip-components=1
 
+ADD ./libs/jar/content-based-routing-1.0.0.jar /usr/share/java/custom-transforms/
+
 RUN mkdir -p /usr/share/java/mongo-kafka-connect
 ADD https://repo1.maven.org/maven2/org/mongodb/kafka/mongo-kafka-connect/1.10.1/mongo-kafka-connect-1.10.1-all.jar /usr/share/java/mongo-kafka-connect/
 

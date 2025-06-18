@@ -21,6 +21,7 @@ export class CreateAuctionDtoMapper {
       productCondition: dto.productCondition,
       thumbnailKey: dto.thumbnailKey,
       categoryId: dto.categoryId,
+      tagIds: dto.tagIds,
     };
   };
 
@@ -41,6 +42,7 @@ export class CreateAuctionDtoMapper {
       thumbnailUrl: response.thumbnailUrl,
       createdAt: response.createdAt.toISOString(),
       sellerUuid: response.sellerUuid,
+      tagIds: response.tagIds,
       images: response.images.map(
         (image) =>
           ({

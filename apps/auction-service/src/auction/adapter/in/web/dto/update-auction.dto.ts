@@ -39,6 +39,9 @@ export class UpdateAuctionRequestDto {
   @ApiProperty({ required: false, type: Number })
   minimumBid?: number;
 
+  @ApiProperty({ required: false, type: [Number] })
+  tagIds?: number[];
+
   @ApiProperty({ required: false, type: [UpdateAuctionImageRequestDto] })
   images?: UpdateAuctionImageRequestDto[];
 }
@@ -99,6 +102,9 @@ export class UpdateAuctionResponseDto {
 
   @ApiProperty({ type: String })
   sellerUuid!: string;
+
+  @ApiProperty({ type: [Number] })
+  tagIds!: number[];
 
   @ApiProperty({ type: [UpdateAuctionImageResponseDto] })
   images!: UpdateAuctionImageResponseDto[];

@@ -8,7 +8,8 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter());
-  console.log(app.getHttpAdapter().getInstance().printRoutes?.());
+  app.enableShutdownHooks();
+  process.on('SIGINT', async () => void (await app.close()));
   app.setGlobalPrefix('api');
 
   app.enableVersioning({

@@ -30,6 +30,7 @@ export const auctionAdminPropsSchema = z
     deletedAt: z.date().nullable(),
     sellerUuid: z.string().uuid({ message: '경매 UUID의 형식이 올바르지 않습니다.' }),
     version: z.number(),
+    tagIds: z.array(z.number()),
     images: z
       .object({
         auctionImageId: z.bigint(),

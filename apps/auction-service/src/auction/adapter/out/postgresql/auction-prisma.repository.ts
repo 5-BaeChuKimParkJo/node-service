@@ -14,7 +14,7 @@ import {
 import AuctionBidderForCreateDomain from '../../../domain/model/auction-bidder-for-create.domain';
 import AuctionBidderDomain from '../../../domain/model/auction-bidder.domain';
 import { AppException } from '@app/common/common/app.exception';
-import { ErrorCode } from '@app/common';
+import { AuctionChangedValue, ErrorCode } from '@app/common';
 import { AuctionCommand } from '../../../application/port/dto/auction.command';
 import { AuctionAdminCommand } from '../../../application/port/dto/auction-admin.command';
 import AuctionAdminDomain from '../../../domain/model/auction-admin.domain';
@@ -24,10 +24,15 @@ import { AuctionsAdminCommand } from '../../../application/port/dto/auctions-adm
 import { AuctionBiddersCommand } from '../../../application/port/dto/auction-bidders.command';
 import { AuctionsByIdsCommand } from '../../../application/port/dto/auctions-by-ids.command';
 import { AuctionsByIdsAdminCommand } from '../../../application/port/dto/auctions-by-ids-admin.command';
+import { toNumber } from '@app/common/utils/number.utils';
+import { S3Service } from '@app/common/s3/s3.service';
 
 @Injectable()
 export class AuctionPrismaRepository extends AuctionRepositoryPort {
-  constructor(private readonly prisma: PrismaService) {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly s3Service: S3Service,
+  ) {
     super();
     this.findAuction = this.findAuction.bind(this);
     this.findAuctions = this.findAuctions.bind(this);
@@ -80,6 +85,24 @@ export class AuctionPrismaRepository extends AuctionRepositoryPort {
     }
   }
 
+  override findAcutionCurrentBidderForUpdate = async (auctionUuid: string, tx?: TX): Promise<string | null> => {
+    const prisma = tx ?? this.prisma;
+    const res = await prisma.$queryRaw<{ currentBidderUuid: string | null }[]>`
+      SELECT "currentBidderUuid"
+      FROM "Auctions"
+      WHERE "auctionUuid" = ${auctionUuid}::uuid
+      FOR UPDATE;
+    `;
+
+    if (res.length === 0) {
+      throw new AppException(
+        { message: '해당 경매를 찾을 수 없습니다.', code: ErrorCode.NOT_FOUND },
+        HttpStatus.NOT_FOUND,
+      );
+    }
+    return res[0].currentBidderUuid;
+  };
+
   override findAuctionsByIds(args: AuctionsByIdsCommand): Promise<AuctionDomain[]>;
   override findAuctionsByIds(args: AuctionsByIdsAdminCommand): Promise<AuctionAdminDomain[]>;
   override async findAuctionsByIds({
@@ -97,9 +120,22 @@ export class AuctionPrismaRepository extends AuctionRepositoryPort {
     });
 
     if (type === 'user') {
-      return rows.map((row) => new AuctionDomain({ ...row, status: 'visible', images: row.auctionImages }));
+      return rows.map(
+        (row) =>
+          new AuctionDomain({
+            ...row,
+            status: 'visible',
+            images: row.auctionImages,
+          }),
+      );
     } else if (type === 'admin') {
-      return rows.map((row) => new AuctionAdminDomain({ ...row, images: row.auctionImages }));
+      return rows.map(
+        (row) =>
+          new AuctionAdminDomain({
+            ...row,
+            images: row.auctionImages,
+          }),
+      );
     } else {
       const _exhaustiveCheck: never = type;
       throw new AppException(
@@ -172,12 +208,25 @@ export class AuctionPrismaRepository extends AuctionRepositoryPort {
 
     if (type === 'user') {
       return {
-        items: items.map((row) => new AuctionDomain({ ...row, status: 'visible', images: row.auctionImages })),
+        items: items.map(
+          (row) =>
+            new AuctionDomain({
+              ...row,
+              status: 'visible',
+              images: row.auctionImages,
+            }),
+        ),
         nextCursor,
       };
     } else if (type === 'admin') {
       return {
-        items: items.map((row) => new AuctionAdminDomain({ ...row, images: row.auctionImages })),
+        items: items.map(
+          (row) =>
+            new AuctionAdminDomain({
+              ...row,
+              images: row.auctionImages,
+            }),
+        ),
         nextCursor,
       };
     } else {
@@ -191,50 +240,65 @@ export class AuctionPrismaRepository extends AuctionRepositoryPort {
 
   override createAuction = async (auctionForCreateDomain: AuctionForCreateDomain): Promise<AuctionDomain> => {
     const { images, ...auction } = auctionForCreateDomain.getSnapshot();
-    const rows = await this.prisma.auctions.create({
-      include: {
-        auctionImages: true,
-      },
-      data: {
-        ...auction,
-        auctionImages: {
-          createMany: {
-            data: images,
-          },
+    return await this.prisma.$transaction(async (tx) => {
+      const { auctionImages, ...row } = await tx.auctions.create({
+        include: {
+          auctionImages: true,
         },
-      },
-    });
-    return new AuctionDomain(auctionPropsSchema.parse({ ...rows, images: rows.auctionImages }));
-  };
-
-  override updateAuction = async (auctionForUpdate: AuctionForUpdateDomain): Promise<AuctionDomain> => {
-    const { images, auctionUuid, ...auction } = auctionForUpdate.getSnapshot();
-    const rows = await this.prisma.auctions.update({
-      where: { auctionUuid },
-      include: {
-        auctionImages: true,
-      },
-      data: {
-        ...auction,
-        ...(images && {
+        data: {
+          ...auction,
           auctionImages: {
-            deleteMany: {},
             createMany: {
               data: images,
             },
           },
-        }),
-        version: { increment: 1 },
-      },
+        },
+      });
+      const auctionDomain = new AuctionDomain(auctionPropsSchema.parse({ ...row, images: auctionImages }));
+      await this.createAuctionOutbox(auctionDomain, 'c', tx);
+      return auctionDomain;
     });
-    return new AuctionDomain(auctionPropsSchema.parse({ ...rows, images: rows.auctionImages }));
+  };
+
+  override updateAuction = async (auctionForUpdate: AuctionForUpdateDomain): Promise<AuctionDomain> => {
+    const { images, auctionUuid, ...auction } = auctionForUpdate.getSnapshot();
+    return await this.prisma.$transaction(async (tx) => {
+      const { auctionImages, ...row } = await tx.auctions.update({
+        where: { auctionUuid },
+        include: {
+          auctionImages: true,
+        },
+        data: {
+          ...auction,
+          ...(images && {
+            auctionImages: {
+              deleteMany: {},
+              createMany: {
+                data: images,
+              },
+            },
+          }),
+          version: { increment: 1 },
+        },
+      });
+      const auctionDomain = new AuctionDomain(auctionPropsSchema.parse({ ...row, images: auctionImages }));
+      await this.createAuctionOutbox(auctionDomain, 'u', tx);
+      return auctionDomain;
+    });
   };
 
   override deleteAuction = async (auctionForDelete: AuctionForDeleteDomain): Promise<void> => {
     const { auctionUuid } = auctionForDelete.getSnapshot();
-    await this.prisma.auctions.update({
-      where: { auctionUuid },
-      data: { deletedAt: new Date() },
+    return await this.prisma.$transaction(async (tx) => {
+      const { auctionImages, ...row } = await tx.auctions.update({
+        where: { auctionUuid },
+        data: { deletedAt: new Date() },
+        include: {
+          auctionImages: true,
+        },
+      });
+      const auctionDomain = new AuctionDomain(auctionPropsSchema.parse({ ...row, images: auctionImages }));
+      await this.createAuctionOutbox(auctionDomain, 'd', tx);
     });
   };
 
@@ -251,13 +315,17 @@ export class AuctionPrismaRepository extends AuctionRepositoryPort {
     });
   };
 
-  override updateAuctionCurrentBid = async (auctionUuid: string, bidAmount: bigint, tx?: TX): Promise<number> => {
+  override updateAuctionCurrentBid = async (
+    auctionUuid: string,
+    bidAmount: bigint,
+    bidderUuid: string,
+    tx?: TX,
+  ): Promise<number> => {
     const prisma = tx ?? this.prisma;
     const res = await prisma.auctions.updateMany({
       where: { auctionUuid, currentBid: { lt: bidAmount } },
-      data: { currentBid: bidAmount },
+      data: { currentBid: bidAmount, currentBidderUuid: bidderUuid },
     });
-
     return res.count;
   };
 
@@ -307,5 +375,30 @@ export class AuctionPrismaRepository extends AuctionRepositoryPort {
       items: items.map((row) => new AuctionBidderDomain({ ...row, auctionUuid })),
       nextCursor,
     };
+  };
+
+  private createAuctionOutbox = async (auction: AuctionDomain, op: 'c' | 'u' | 'd', tx?: TX): Promise<void> => {
+    const prisma = tx ?? this.prisma;
+    const snapshot = auction.getSnapshot();
+    const { auctionId: _, status: __, ...row } = snapshot;
+    const auctionChangedValue: AuctionChangedValue = {
+      aggregateType: 'auction',
+      aggregateId: snapshot.auctionUuid,
+      eventType: op === 'c' ? 'AuctionCreated' : op === 'u' ? 'AuctionUpdated' : 'AuctionDeleted',
+      op,
+      payload: {
+        ...row,
+        currentBid: toNumber(row.currentBid),
+        minimumBid: toNumber(row.minimumBid),
+        viewCount: toNumber(row.viewCount),
+        thumbnailUrl: this.s3Service.toFullUrl(row.thumbnailKey),
+        images: snapshot.images.map((image) => ({
+          ...image,
+          auctionImageId: toNumber(image.auctionImageId),
+          url: this.s3Service.toFullUrl(image.key),
+        })),
+      },
+    };
+    await prisma.outbox.create({ data: auctionChangedValue });
   };
 }

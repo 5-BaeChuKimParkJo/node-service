@@ -9,6 +9,7 @@ export type CreateAuctionCommand = {
   thumbnailKey: string;
   title: string;
   minimumBid: bigint;
+  tagIds: number[];
   images: {
     key: string;
     order: number;

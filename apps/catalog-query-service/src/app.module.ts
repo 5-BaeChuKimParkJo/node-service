@@ -4,6 +4,7 @@ import { ConfigModule } from '@nestjs/config';
 import { envValidate } from './common/env-schema';
 import { ReadModule } from './read/read.module';
 import { HealthModule } from './health/health.module';
+import { MongoModule } from './mongo/mongo.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { HealthModule } from './health/health.module';
     HealthModule,
     SyncModule,
     ReadModule,
+    MongoModule,
   ],
   controllers: [],
   providers: [],

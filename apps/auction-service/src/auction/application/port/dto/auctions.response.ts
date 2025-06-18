@@ -25,6 +25,7 @@ type AuctionsItemResponse = {
   thumbnailUrl: string;
   createdAt: Date;
   sellerUuid: string;
+  tagIds: number[];
   images: AuctionsImageResponse[];
 };
 

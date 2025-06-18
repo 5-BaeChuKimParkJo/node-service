@@ -7,7 +7,7 @@ COPY pnpm-lock.yaml ./
 COPY tsconfig.json tsconfig.json
 COPY nest-cli.json nest-cli.json
 
-RUN npm i -g pnpm prisma
+RUN npm i -g pnpm
 
 RUN pnpm i
 

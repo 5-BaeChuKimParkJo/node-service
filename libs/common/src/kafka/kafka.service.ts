@@ -11,7 +11,9 @@ export class KafkaService implements OnModuleInit, OnModuleDestroy {
     this.kafka = new Kafka({
       brokers: this.configService.getOrThrow('KAFKA_SERVERS', { infer: true }).split(','),
     });
-    this.producer = this.kafka.producer();
+    this.producer = this.kafka.producer({
+      allowAutoTopicCreation: false,
+    });
   }
 
   onModuleInit = async () => {

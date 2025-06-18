@@ -10,6 +10,7 @@ export type UpdateAuctionCommand = {
   thumbnailKey?: string;
   title?: string;
   minimumBid?: bigint;
+  tagIds?: number[];
   images?: {
     key: string;
     order: number;

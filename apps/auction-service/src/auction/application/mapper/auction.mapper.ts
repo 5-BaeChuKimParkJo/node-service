@@ -28,6 +28,7 @@ export class AuctionMapper {
       status: this.mapAuctionStatus(snapshot),
       categoryId: snapshot.categoryId,
       directDealLocation: snapshot.directDealLocation,
+      tagIds: snapshot.tagIds,
       images: snapshot.images.map((image) => ({
         auctionImageId: image.auctionImageId,
         url: this.auctionFileStoragePort.toFullUrl(image.key),

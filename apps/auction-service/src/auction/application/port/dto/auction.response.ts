@@ -20,5 +20,6 @@ export type AuctionResponse = {
   thumbnailUrl: string;
   createdAt: Date;
   sellerUuid: string;
+  tagIds: number[];
   images: AuctionImageResponse[];
 };

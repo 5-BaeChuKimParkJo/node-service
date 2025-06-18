@@ -8,9 +8,10 @@ import type { FastifyReply, FastifyRequest } from 'fastify';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter());
-  console.log(app.getHttpAdapter().getInstance().printRoutes?.());
-  app.setGlobalPrefix('api');
+  app.enableShutdownHooks();
+  process.on('SIGINT', async () => void (await app.close()));
 
+  app.setGlobalPrefix('api');
   app.enableVersioning({
     type: VersioningType.URI,
   });
@@ -31,7 +32,7 @@ async function bootstrap() {
     .setDescription('API에 대한 설명')
     .setVersion('1.0')
     .addBearerAuth()
-    .addServer('/auction-service')
+    // .addServer('/auction-service')
     .build();
   const document = SwaggerModule.createDocument(app, config);
   app.use('/v3/api-docs', (_: FastifyRequest, res: FastifyReply) => res.send(document));

@@ -12,8 +12,8 @@ export class AuctionKafkaPublisher extends AuctionPublisherPort {
   publishBidderCreated = async (event: PublishBidderCreatedArgs): Promise<void> => {
     await this.kafkaService.send({
       topic: `auction.bidder.created`,
-      acks: -1,
       messages: [{ key: event.auctionUuid + Math.random(), value: JSON.stringify(event) }],
+      acks: -1,
     });
   };
 }
