@@ -35,13 +35,31 @@ services:
     volumes:
       - ./apps/catalog-query-service:/usr/src/app/apps/catalog-query-service
       - ./libs:/usr/src/app/libs
-      - /usr/src/app/apps/catalog-query-service/src/prisma/generated
     env_file:
       - ./libs/common/.env
       - ./apps/catalog-query-service/.env
     depends_on:
-      - kafka-connect
-      - mongo
+      kafka1:
+        condition: service_healthy
+      kafka2:
+        condition: service_healthy
+      kafka3:
+        condition: service_healthy
+
+  bff-server:
+    build:
+      context: .
+      dockerfile: ./apps/bff-server/Dockerfile
+      target: development
+    command: pnpm run start:dev bff-server
+    ports:
+      - '3003:3000'
+    volumes:
+      - ./apps/bff-server:/usr/src/app/apps/bff-server
+      - ./libs:/usr/src/app/libs
+    env_file:
+      - ./libs/common/.env
+      - ./apps/bff-server/.env
 
   mongo:
     image: mongo:8

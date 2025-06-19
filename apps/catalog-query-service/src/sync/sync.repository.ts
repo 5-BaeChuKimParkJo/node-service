@@ -4,7 +4,7 @@ import { Db, DeleteResult, UpdateResult } from 'mongodb';
 import * as F from 'fp-ts/function';
 import * as TE from 'fp-ts/TaskEither';
 import * as E from 'fp-ts/Either';
-import { CatalogAuction, CatalogAuctionSchema } from './schema/catalog.schema';
+import { CatalogAuction, catalogAuctionSchema } from './schema/catalog.schema';
 
 @Injectable()
 export class SyncRepository {
@@ -13,7 +13,7 @@ export class SyncRepository {
   upsertCatalogAuction = (catalogAuction: CatalogAuction): TE.TaskEither<string, UpdateResult<Document>> => {
     return F.pipe(
       E.tryCatch(
-        () => CatalogAuctionSchema.parse(catalogAuction),
+        () => catalogAuctionSchema.parse(catalogAuction),
         (error) => `Failed to parse catalog auction: ${String(error)}`,
       ),
       TE.fromEither,

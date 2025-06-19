@@ -1,8 +1,7 @@
 import { add } from 'date-fns';
 import { auctionForCreatePropsSchema } from '../schema/auction-for-create.schema';
 import { HttpStatus } from '@nestjs/common';
-import { ErrorCode, User } from '@app/common';
-import { AppException } from '@app/common/common/app.exception';
+import { ErrorCode, User, AppException } from '@app/common';
 import { z } from 'zod';
 
 export type AuctionForCreateProps = z.infer<typeof auctionForCreatePropsSchema>;

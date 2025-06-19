@@ -6,6 +6,8 @@ export const ErrorCode = {
   INVALID_EXTENSION: 1004,
   FILE_NOT_FOUND: 1005,
   NOT_FOUND: 1006,
+  DB_ERROR: 1007,
+  OTHER_SERVICE_ERROR: 1008,
 } satisfies Record<string, number>;
 
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];

@@ -4,8 +4,7 @@ import { createPresignedPost, PresignedPost } from '@aws-sdk/s3-presigned-post';
 import { ConfigService } from '@nestjs/config';
 import { EnvSchema } from '../common/env-schema';
 import { CheckFileExistsArgs, GeneratePresignedUrlArgs } from './s3.types';
-import { AppException } from '../common/app.exception';
-import { ErrorCode } from '../common';
+import { ErrorCode, AppException } from '../common';
 
 @Injectable()
 export class S3Service {

@@ -1,7 +1,6 @@
-import { ErrorCode, User } from '@app/common';
+import { ErrorCode, User, AppException } from '@app/common';
 import { z } from 'zod';
 import { auctionBidderForCreatePropsSchema } from '../schema/auction-bidder-for-create.schema';
-import { AppException } from '@app/common/common/app.exception';
 import { HttpStatus } from '@nestjs/common';
 
 export type AuctionBidderForCreateProps = z.infer<typeof auctionBidderForCreatePropsSchema>;

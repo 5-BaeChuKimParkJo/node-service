@@ -2,8 +2,7 @@ import AuctionAdminDomain, { AuctionAdminProps } from '../../domain/model/auctio
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { AuctionFileStoragePort } from '../port/out/auction-file-storage-port';
 import { AuctionsAdminResponse } from '../port/dto/auctions-admin.response';
-import { AppException } from '@app/common/common/app.exception';
-import { ErrorCode } from '@app/common';
+import { AppException, ErrorCode } from '@app/common';
 
 @Injectable()
 export class AuctionAdminMapper {

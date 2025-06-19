@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import { Tag, tagSchema } from './schema/tag.schema';
-import { Category, categorySchema } from './schema/category.schema';
+import { RemoteTag, remoteTagSchema } from './schema/remote-tag.schema';
+import { RemoteCategory, remoteCategorySchema } from './schema/remote-category.schema';
 import z from 'zod';
 import * as F from 'fp-ts/function';
 import * as A from 'fp-ts/Array';
@@ -11,11 +11,10 @@ import * as TE from 'fp-ts/TaskEither';
 import * as E from 'fp-ts/Either';
 import * as Apply from 'fp-ts/Apply';
 import axios from 'axios';
-import { AuctionChangedValue } from '../../../../libs/common/src/schema/auction-changed.schema';
-import { U } from '@app/common/utils/fp-ts';
 import { ConfigService } from '@nestjs/config';
 import { EnvSchema } from '../common/env-schema';
 import { SyncRepository } from './sync.repository';
+import { AuctionChangedValue, U } from '@app/common';
 
 @Injectable()
 export class SyncFn {
@@ -24,7 +23,7 @@ export class SyncFn {
     private readonly syncRepository: SyncRepository,
   ) {}
 
-  fetchCategory = (categoryId: number): TE.TaskEither<string, Category> => {
+  fetchCategory = (categoryId: number): TE.TaskEither<string, RemoteCategory> => {
     return F.pipe(
       TE.tryCatch(
         () => axios.get(`${this.configService.get('CATEGORY_SERVICE')}/api/v1/category/${categoryId}`),
@@ -33,7 +32,7 @@ export class SyncFn {
       TE.flatMap((res) =>
         TE.fromEither(
           E.tryCatch(
-            () => categorySchema.parse(res.data),
+            () => remoteCategorySchema.parse(res.data),
             (error) => `카테고리 스키마 검증 실패: ${String(error)}`,
           ),
         ),
@@ -41,7 +40,7 @@ export class SyncFn {
     );
   };
 
-  fetchTags = (tagIds: number[]): TE.TaskEither<string, Tag[]> => {
+  fetchTags = (tagIds: number[]): TE.TaskEither<string, RemoteTag[]> => {
     return F.pipe(
       TE.tryCatch(
         () =>
@@ -53,7 +52,7 @@ export class SyncFn {
       TE.flatMap((tags) =>
         TE.fromEither(
           E.tryCatch(
-            () => z.array(tagSchema).parse(tags.data),
+            () => z.array(remoteTagSchema).parse(tags.data),
             (error) => `태그 스키마 검증 실패: ${String(error)}`,
           ),
         ),

@@ -1,22 +1,22 @@
 import { z } from 'zod';
-import { AuctionSchema } from './auction.schema';
-import { categorySchema } from './category.schema';
-import { tagSchema } from './tag.schema';
+import { remoteAuctionSchema } from './remote-auction.schema';
+import { remoteCategorySchema } from './remote-category.schema';
+import { remoteTagSchema } from './remote-tag.schema';
 
-export const CatalogAuctionSchema = z
+export const catalogAuctionSchema = z
   .object({
     type: z.enum(['auction']),
-    category: categorySchema.nullable(),
-    tags: z.array(tagSchema),
+    category: remoteCategorySchema.nullable(),
+    tags: z.array(remoteTagSchema),
   })
-  .merge(AuctionSchema);
-export type CatalogAuction = z.infer<typeof CatalogAuctionSchema>;
+  .merge(remoteAuctionSchema);
+export type CatalogAuction = z.infer<typeof catalogAuctionSchema>;
 
-export const CatalogProductSchema = z.object({
+export const catalogProductSchema = z.object({
   type: z.enum(['product']),
 });
-export type CatalogProduct = z.infer<typeof CatalogProductSchema>;
+export type CatalogProduct = z.infer<typeof catalogProductSchema>;
 
-export const CatalogSchema = z.union([CatalogAuctionSchema, CatalogProductSchema]);
+export const catalogSchema = z.union([catalogAuctionSchema, catalogProductSchema]);
 
-export type Catalog = z.infer<typeof CatalogSchema>;
+export type Catalog = z.infer<typeof catalogSchema>;

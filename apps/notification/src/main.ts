@@ -5,9 +5,12 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { VersioningType } from '@nestjs/common';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import type { FastifyReply, FastifyRequest } from 'fastify';
+import { TaskEitherInterceptor } from '@app/common/interceptor/task-either.interceptor';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter());
+  app.enableShutdownHooks();
+  process.on('SIGINT', async () => void (await app.close()));
   app.setGlobalPrefix('api');
 
   app.enableVersioning({
@@ -30,13 +33,15 @@ async function bootstrap() {
     .setDescription('API에 대한 설명')
     .setVersion('1.0')
     .addBearerAuth()
-    // .addServer('/bff-service')
+    .addServer('/notification-service')
     .build();
   const document = SwaggerModule.createDocument(app, config);
   app.use('/v3/api-docs', (_: FastifyRequest, res: FastifyReply) => res.send(document));
   SwaggerModule.setup('/swagger-ui', app, () => document, {
     swaggerUrl: '/v3/api-docs',
   });
+
+  app.useGlobalInterceptors(new TaskEitherInterceptor());
 
   await app.listen(process.env.PORT ?? 3000, '0.0.0.0');
 }

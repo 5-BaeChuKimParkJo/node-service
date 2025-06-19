@@ -13,8 +13,7 @@ import {
 } from '../../../application/port/out/auction-repository.port.type';
 import AuctionBidderForCreateDomain from '../../../domain/model/auction-bidder-for-create.domain';
 import AuctionBidderDomain from '../../../domain/model/auction-bidder.domain';
-import { AppException } from '@app/common/common/app.exception';
-import { AuctionChangedValue, ErrorCode } from '@app/common';
+import { AuctionChangedValue, ErrorCode, AppException } from '@app/common';
 import { AuctionCommand } from '../../../application/port/dto/auction.command';
 import { AuctionAdminCommand } from '../../../application/port/dto/auction-admin.command';
 import AuctionAdminDomain from '../../../domain/model/auction-admin.domain';

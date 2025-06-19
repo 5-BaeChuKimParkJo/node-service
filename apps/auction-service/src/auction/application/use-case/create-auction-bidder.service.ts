@@ -1,9 +1,8 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { AuctionRepositoryPort } from '../port/out/auction-repository.port';
-import { ErrorCode, User } from '@app/common';
+import { ErrorCode, User, AppException } from '@app/common';
 import { CreateAuctionBidderUseCase } from '../port/in/create-auction-bidder.use-case';
 import { CreateAuctionBidderCommand } from '../port/dto/create-auction-bidder.command';
-import { AppException } from '@app/common/common/app.exception';
 import AuctionBidderForCreateDomain from '../../domain/model/auction-bidder-for-create.domain';
 
 @Injectable()

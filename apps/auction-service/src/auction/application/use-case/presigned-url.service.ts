@@ -5,8 +5,7 @@ import { PresignedUrlCommand } from '../port/dto/presigned-url.command';
 import { PresignedUrlResponse } from '../port/dto/presigned-url.response';
 import { v4 as uuidv4 } from 'uuid';
 import mime from 'mime';
-import { ErrorCode, User } from '@app/common';
-import { AppException } from '@app/common/common/app.exception';
+import { ErrorCode, User, AppException } from '@app/common';
 
 @Injectable()
 export class PresignedUrlService extends PresignedUrlUseCase {
