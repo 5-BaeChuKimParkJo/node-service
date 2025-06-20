@@ -31,12 +31,10 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v1
 
       - name: Install pnpm
-        run: npm install -g pnpm prisma
 
       - name: Install dependencies and build
         run: |
           pnpm install
-          pnpm exec prisma generate --schema=apps/notification-service/src/prisma/schema/schema.prisma
           pnpm build notification-service
 
       - name: Build Docker image
