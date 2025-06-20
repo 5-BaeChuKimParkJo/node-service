@@ -76,14 +76,14 @@ export class MemberResponseDto {
   @ApiProperty({ type: String })
   gradeUuid!: string;
 
-  @ApiProperty({ enum: ['NICE_GUY', 'GOOD_BOY', 'REAL_MAN'] })
-  honor!: string;
+  @ApiProperty({ enum: ['NICE_GUY', 'GOOD_BOY', 'REAL_MAN'], nullable: true })
+  honor?: string | null;
 
   @ApiProperty({ enum: ['ACTIVE', 'INACTIVE', 'BLOCKED'] })
   state!: string;
 
   @ApiProperty({ type: String, nullable: true })
-  profileImageUrl!: string | null;
+  profileImageUrl?: string | null;
 }
 
 export class CatalogAuctionResponseDto extends AuctionResponseDto {
