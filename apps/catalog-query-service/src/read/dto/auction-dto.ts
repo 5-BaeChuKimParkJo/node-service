@@ -22,11 +22,11 @@ export class AuctionResponseDto {
   @ApiProperty({ type: Boolean })
   isDirectDeal!: boolean;
 
-  @ApiProperty({ type: String, nullable: true })
-  directDealLocation!: string | null;
+  @ApiProperty({ required: false, type: String, nullable: true })
+  directDealLocation?: string | null;
 
-  @ApiProperty({ type: String })
-  productCondition!: string;
+  @ApiProperty({ enum: ['unopened', 'new', 'used'] })
+  productCondition!: 'unopened' | 'new' | 'used';
 
   @ApiProperty({ type: Number })
   viewCount!: number;
@@ -42,6 +42,9 @@ export class AuctionResponseDto {
 
   @ApiProperty({ type: Number })
   currentBid!: number;
+
+  @ApiProperty({ enum: ['waiting', 'active', 'ended'] })
+  status!: 'waiting' | 'active' | 'ended';
 }
 
 export class CategoryResponseDto {
@@ -56,6 +59,17 @@ export class CategoryResponseDto {
 
   @ApiProperty({ type: String, nullable: true })
   imageUrl?: string | null;
+}
+
+export class ImageResponseDto {
+  @ApiProperty({ type: Number })
+  auctionImageId!: number;
+
+  @ApiProperty({ type: String })
+  url!: string;
+
+  @ApiProperty({ type: Number })
+  order!: number;
 }
 
 export class TagResponseDto {
@@ -76,14 +90,14 @@ export class MemberResponseDto {
   @ApiProperty({ type: String })
   gradeUuid!: string;
 
-  @ApiProperty({ enum: ['NICE_GUY', 'GOOD_BOY', 'REAL_MAN'] })
-  honor!: string;
+  @ApiProperty({ enum: ['NICE_GUY', 'GOOD_BOY', 'REAL_MAN'], nullable: true })
+  honor?: string | null;
 
   @ApiProperty({ enum: ['ACTIVE', 'INACTIVE', 'BLOCKED'] })
   state!: string;
 
   @ApiProperty({ type: String, nullable: true })
-  profileImageUrl!: string | null;
+  profileImageUrl?: string | null;
 }
 
 export class CatalogAuctionResponseDto extends AuctionResponseDto {
@@ -98,4 +112,7 @@ export class CatalogAuctionResponseDto extends AuctionResponseDto {
 
   @ApiProperty({ type: MemberResponseDto })
   seller!: MemberResponseDto;
+
+  @ApiProperty({ type: [ImageResponseDto] })
+  images!: ImageResponseDto[];
 }

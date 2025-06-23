@@ -1,0 +1,61 @@
+services:
+  auction-service:
+    build:
+      context: .
+      dockerfile: ./apps/auction-service/Dockerfile
+      target: development
+    command: pnpm run start:dev auction-service
+    ports:
+      - '3001:3000'
+    volumes:
+      - ./apps/auction-service:/usr/src/app/apps/auction-service
+      - ./libs:/usr/src/app/libs
+      - /usr/src/app/apps/auction-service/src/prisma/generated
+    env_file:
+      - ./libs/common/.env
+      - ./apps/auction-service/.env
+
+  catalog-query-service:
+    build:
+      context: .
+      dockerfile: ./apps/catalog-query-service/Dockerfile
+      target: development
+    command: pnpm run start:dev catalog-query-service
+    ports:
+      - '3002:3000'
+    volumes:
+      - ./apps/catalog-query-service:/usr/src/app/apps/catalog-query-service
+      - ./libs:/usr/src/app/libs
+    env_file:
+      - ./libs/common/.env
+      - ./apps/catalog-query-service/.env
+
+  notification-consumer-service:
+    build:
+      context: .
+      dockerfile: ./apps/notification-consumer-service/Dockerfile
+      target: development
+    command: pnpm run start:dev notification-consumer-service
+    ports:
+      - '3003:3000'
+    volumes:
+      - ./apps/notification-consumer-service:/usr/src/app/apps/notification-consumer-service
+      - ./libs:/usr/src/app/libs
+    env_file:
+      - ./libs/common/.env
+      - ./apps/notification-consumer-service/.env
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: ./apps/notification-service/Dockerfile
+      target: development
+    command: pnpm run start:dev notification-service
+    ports:
+      - '3004:3000'
+    volumes:
+      - ./apps/notification-service:/usr/src/app/apps/notification-service
+      - ./libs:/usr/src/app/libs
+    env_file:
+      - ./libs/common/.env
+      - ./apps/notification-service/.env

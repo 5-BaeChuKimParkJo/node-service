@@ -379,7 +379,7 @@ export class AuctionPrismaRepository extends AuctionRepositoryPort {
   private createAuctionOutbox = async (auction: AuctionDomain, op: 'c' | 'u' | 'd', tx?: TX): Promise<void> => {
     const prisma = tx ?? this.prisma;
     const snapshot = auction.getSnapshot();
-    const { auctionId: _, status: __, ...row } = snapshot;
+    const { auctionId: _, ...row } = snapshot;
     const auctionChangedValue: AuctionChangedValue = {
       aggregateType: 'auction',
       aggregateId: snapshot.auctionUuid,

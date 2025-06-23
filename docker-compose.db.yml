@@ -1,0 +1,35 @@
+services:
+  mongo:
+    image: mongo:8
+    ports:
+      - '27017:27017'
+    volumes:
+      - ./volumes/mongo:/data/db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: rootpass
+      MONGO_INITDB_DATABASE: mydb
+    healthcheck:
+      test: ['CMD', 'mongo', 'mongodb://root:rootpass@mongo:27017/admin', '--eval', 'db.adminCommand("ping")']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  postgres-auction-service:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: postgres
+    ports:
+      - '6001:5432'
+    volumes:
+      - ./volumes/postgres/auction-service:/var/lib/postgresql/data
+    command: ['postgres', '-c', 'wal_level=logical']
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s

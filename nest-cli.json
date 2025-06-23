@@ -15,15 +15,6 @@
         ]
       }
     },
-    "bff-server": {
-      "type": "application",
-      "root": "apps/bff-server",
-      "entryFile": "main",
-      "sourceRoot": "apps/bff-server/src",
-      "compilerOptions": {
-        "tsConfigPath": "apps/bff-server/tsconfig.app.json"
-      }
-    },
     "catalog-query-service": {
       "type": "application",
       "root": "apps/catalog-query-service",
@@ -42,13 +33,22 @@
         "tsConfigPath": "libs/common/tsconfig.lib.json"
       }
     },
-    "notification": {
+    "notification-consumer-service": {
       "type": "application",
-      "root": "apps/notification",
+      "root": "apps/notification-consumer-service",
       "entryFile": "main",
-      "sourceRoot": "apps/notification/src",
+      "sourceRoot": "apps/notification-consumer-service/src",
       "compilerOptions": {
-        "tsConfigPath": "apps/notification/tsconfig.app.json"
+        "tsConfigPath": "apps/notification-consumer-service/tsconfig.app.json"
+      }
+    },
+    "notification-service": {
+      "type": "application",
+      "root": "apps/notification-service",
+      "entryFile": "main",
+      "sourceRoot": "apps/notification-service/src",
+      "compilerOptions": {
+        "tsConfigPath": "apps/notification-service/tsconfig.app.json"
       }
     }
   },

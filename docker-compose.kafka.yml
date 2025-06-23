@@ -1,0 +1,154 @@
+volumes:
+  kafka1:
+  kafka2:
+  kafka3:
+
+services:
+  kafka1:
+    image: bitnami/kafka:3.7.0
+    container_name: kafka1
+    restart: unless-stopped
+    ports:
+      - '9092:9092'
+      - '10000:10000'
+    environment:
+      - KAFKA_ENABLE_KRAFT=yes
+      - KAFKA_CFG_BROKER_ID=0
+      - KAFKA_CFG_NODE_ID=0
+      - KAFKA_KRAFT_CLUSTER_ID=HsDBs9l6UUmQq7Y5E6bNlw
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@kafka1:9093,1@kafka2:9093,2@kafka3:9093
+      - KAFKA_CFG_PROCESS_ROLES=controller,broker
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:10000
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka1:9092,EXTERNAL://localhost:10000
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=true
+      - KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR=2
+      - KAFKA_CFG_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=2
+      - KAFKA_CFG_TRANSACTION_STATE_LOG_MIN_ISR=2
+      - ALLOW_PLAINTEXT_LISTENER=yes
+    volumes:
+      - ./volumes/kafka1:/bitnami/kafka
+    healthcheck:
+      test: ['CMD', 'kafka-topics.sh', '--bootstrap-server', 'localhost:9092', '--list']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  kafka2:
+    image: bitnami/kafka:3.7.0
+    container_name: kafka2
+    restart: unless-stopped
+    ports:
+      - '9093:9092'
+      - '10001:10000'
+    environment:
+      - KAFKA_ENABLE_KRAFT=yes
+      - KAFKA_CFG_BROKER_ID=1
+      - KAFKA_CFG_NODE_ID=1
+      - KAFKA_KRAFT_CLUSTER_ID=HsDBs9l6UUmQq7Y5E6bNlw
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@kafka1:9093,1@kafka2:9093,2@kafka3:9093
+      - KAFKA_CFG_PROCESS_ROLES=controller,broker
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:10000
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka2:9092,EXTERNAL://localhost:10001
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=true
+      - KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR=2
+      - KAFKA_CFG_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=2
+      - KAFKA_CFG_TRANSACTION_STATE_LOG_MIN_ISR=2
+      - ALLOW_PLAINTEXT_LISTENER=yes
+    volumes:
+      - ./volumes/kafka2:/bitnami/kafka
+    healthcheck:
+      test: ['CMD', 'kafka-topics.sh', '--bootstrap-server', 'localhost:9092', '--list']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  kafka3:
+    image: bitnami/kafka:3.7.0
+    container_name: kafka3
+    restart: unless-stopped
+    ports:
+      - '9094:9092'
+      - '10002:10000'
+    environment:
+      - KAFKA_ENABLE_KRAFT=yes
+      - KAFKA_CFG_BROKER_ID=2
+      - KAFKA_CFG_NODE_ID=2
+      - KAFKA_KRAFT_CLUSTER_ID=HsDBs9l6UUmQq7Y5E6bNlw
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@kafka1:9093,1@kafka2:9093,2@kafka3:9093
+      - KAFKA_CFG_PROCESS_ROLES=controller,broker
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:10000
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka3:9092,EXTERNAL://localhost:10002
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      - KAFKA_CFG_AUTO_CREATE_TOPICS_ENABLE=true
+      - KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR=2
+      - KAFKA_CFG_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=2
+      - KAFKA_CFG_TRANSACTION_STATE_LOG_MIN_ISR=2
+      - ALLOW_PLAINTEXT_LISTENER=yes
+    volumes:
+      - ./volumes/kafka3:/bitnami/kafka
+    healthcheck:
+      test: ['CMD', 'kafka-topics.sh', '--bootstrap-server', 'localhost:9092', '--list']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    restart: unless-stopped
+    ports:
+      - '8080:8080'
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=Local-Kraft-Cluster
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=kafka1:9092,kafka2:9092,kafka3:9092
+      - DYNAMIC_CONFIG_ENABLED=true
+      - KAFKA_CLUSTERS_0_AUDIT_TOPICAUDITENABLED=true
+      - KAFKA_CLUSTERS_0_AUDIT_CONSOLEAUDITENABLED=true
+    depends_on:
+      kafka1:
+        condition: service_healthy
+      kafka2:
+        condition: service_healthy
+      kafka3:
+        condition: service_healthy
+
+  kafka-connect:
+    build:
+      context: .
+      dockerfile: Dockerfile.connect
+    container_name: kafka-connect
+    ports:
+      - '8083:8083'
+    environment:
+      CONNECT_BOOTSTRAP_SERVERS: kafka1:9092,kafka2:9092,kafka3:9092
+      CONNECT_REST_PORT: 8083
+      # 클러스터로 구성시 이걸로 동일성 판단
+      CONNECT_GROUP_ID: kafka-connect
+      CONNECT_CONFIG_STORAGE_TOPIC: connect-configs
+      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: '1'
+      CONNECT_OFFSET_STORAGE_TOPIC: connect-offsets
+      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: '1'
+      CONNECT_STATUS_STORAGE_TOPIC: connect-status
+      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: '1'
+      CONNECT_KEY_CONVERTER: 'org.apache.kafka.connect.json.JsonConverter'
+      CONNECT_VALUE_CONVERTER: 'org.apache.kafka.connect.json.JsonConverter'
+      CONNECT_INTERNAL_KEY_CONVERTER: 'org.apache.kafka.connect.json.JsonConverter'
+      CONNECT_INTERNAL_VALUE_CONVERTER: 'org.apache.kafka.connect.json.JsonConverter'
+      CONNECT_PLUGIN_PATH: /usr/share/java,/usr/share/java/custom-transforms
+      CONNECT_REST_ADVERTISED_HOST_NAME: localhost
+      CONNECT_LOG4J_ROOT_LOGLEVEL: INFO
+    depends_on:
+      kafka1:
+        condition: service_healthy
+      kafka2:
+        condition: service_healthy
+      kafka3:
+        condition: service_healthy

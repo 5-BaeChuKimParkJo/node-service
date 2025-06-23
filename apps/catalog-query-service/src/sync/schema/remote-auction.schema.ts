@@ -9,12 +9,20 @@ export const remoteAuctionSchema = z.object({
   endAt: z.preprocess((arg) => (typeof arg === 'string' || typeof arg === 'number' ? new Date(arg) : arg), z.date()),
   isDirectDeal: z.boolean(),
   directDealLocation: z.string().nullable(),
-  productCondition: z.string(),
+  status: z.enum(['visible']),
+  productCondition: z.enum(['unopened', 'new', 'used']),
   viewCount: z.number(),
   thumbnailUrl: z.string(),
   createdAt: z.preprocess(
     (arg) => (typeof arg === 'string' || typeof arg === 'number' ? new Date(arg) : arg),
     z.date(),
+  ),
+  images: z.array(
+    z.object({
+      auctionImageId: z.number(),
+      url: z.string(),
+      order: z.number(),
+    }),
   ),
   version: z.number(),
   sellerUuid: z.string(),

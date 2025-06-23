@@ -22,7 +22,6 @@ export const auctionChangedValueSchema = z
       ),
       isDirectDeal: z.boolean(),
       directDealLocation: z.string().nullable(),
-      productCondition: z.string(),
       viewCount: z.number(),
       thumbnailUrl: z.string(),
       createdAt: z.preprocess(
@@ -33,6 +32,8 @@ export const auctionChangedValueSchema = z
       sellerUuid: z.string(),
       currentBid: z.number(),
       tagIds: z.array(z.number()),
+      status: z.enum(['visible']),
+      productCondition: z.enum(['unopened', 'new', 'used']),
       images: z.array(
         z.object({
           auctionImageId: z.number(),

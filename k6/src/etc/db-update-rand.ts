@@ -8,6 +8,6 @@ export const options: Options = {
 };
 
 export default function () {
-  const res = http.get(`http://localhost:3001/api/test/kafka-send`);
+  const res = http.get(`http://localhost:3001/api/test/db/update-rand/${__ITER}`);
   sleep(1);
 }

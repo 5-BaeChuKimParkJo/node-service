@@ -1,13 +1,8 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { CatalogAuction } from '../sync/schema/catalog.schema';
 import * as F from 'fp-ts/function';
-import * as A from 'fp-ts/Array';
-import * as NEA from 'fp-ts/NonEmptyArray';
-import * as Num from 'fp-ts/number';
-import * as O from 'fp-ts/Option';
 import * as TE from 'fp-ts/TaskEither';
 import * as E from 'fp-ts/Either';
-import * as Apply from 'fp-ts/Apply';
 import { catalogAuctionSchema } from '../sync/schema/catalog.schema';
 import { ErrorCode, AppException } from '@app/common';
 import axios from 'axios';

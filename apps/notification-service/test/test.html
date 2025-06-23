@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SSE Test</title>
+  </head>
+  <body>
+    <script>
+      const token =
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJtZW1iZXJVdWlkIjoiYjUwMTg4ZTktYjQxOC00YjNkLThkZTMtYjEyNjU5NmQ5YzY5IiwiaWF0IjoxNzE4NDEwNjAzfQ.qMoG1Ldz9Nn6qweB2IlU6A9P4_EsfpckY2K2jL8VfFA';
+      const sse = new EventSource(`http://localhost:3004/api/sse?token=${token}`);
+      sse.onmessage = (event) => {
+        console.log(event.data);
+      };
+      sse.onerror = (event) => {
+        console.error(event);
+      };
+      sse.onopen = () => {
+        console.log('SSE connection opened');
+      };
+    </script>
+  </body>
+</html>

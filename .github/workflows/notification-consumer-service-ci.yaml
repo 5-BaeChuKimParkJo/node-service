@@ -1,0 +1,56 @@
+name: Catalog Query Service CI
+
+on:
+  push:
+    branches:
+      - notification-consumer/dev
+      - cicd
+
+env:
+  AWS_REGION: ap-northeast-2
+  ECR_REPOSITORY: cabbage/notification-consumer-service
+  SERVICE_NAME: notification-consumer-service
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install dependencies and build
+        run: |
+          pnpm install
+          pnpm build notification-consumer-service
+
+      - name: Build Docker image
+        run: |
+          docker build -t ${{ env.ECR_REPOSITORY }}:latest -f apps/notification-consumer-service/Dockerfile .
+
+      - name: Tag & Push to ECR
+        run: |
+          REPO_URI=$(aws ecr describe-repositories --repository-names ${{ env.ECR_REPOSITORY }} --region ${{ env.AWS_REGION }} --query "repositories[0].repositoryUri" --output text)
+          docker tag ${{ env.ECR_REPOSITORY }}:latest $REPO_URI:latest
+          docker push $REPO_URI:latest
+
+      - name: Get image digest
+        id: digest
+        run: |
+          IMAGE_DIGEST=$(aws ecr describe-images --repository-name ${{ env.ECR_REPOSITORY }} --image-ids imageTag=latest --query 'imageDetails[0].imageDigest' --output text)
+          echo "Image digest: $IMAGE_DIGEST"
+          echo "digest=$IMAGE_DIGEST" >> $GITHUB_OUTPUT
