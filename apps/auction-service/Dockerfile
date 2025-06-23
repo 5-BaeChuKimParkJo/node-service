@@ -31,7 +31,7 @@ RUN npm install -g prisma pm2
 
 RUN npm install
 COPY apps/auction-service/src/prisma/schema/schema.prisma apps/auction-service/src/prisma/schema/schema.prisma
-RUN npm exec prisma generate --schema=./apps/auction-service/src/prisma/schema/schema.prisma
+RUN npx prisma generate --schema=apps/auction-service/src/prisma/schema/schema.prisma
 RUN npm prune --prod
 
 COPY --from=development /usr/src/app/dist ./dist
