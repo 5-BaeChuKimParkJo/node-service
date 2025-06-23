@@ -67,7 +67,6 @@ export class AuctionChangedConsumer implements OnModuleInit, OnModuleDestroy {
                   }),
                 },
               ],
-              acks: -1,
             });
             console.error('3회이상 에러남ㅠ', error);
 

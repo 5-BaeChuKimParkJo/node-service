@@ -13,7 +13,6 @@ export class AuctionKafkaPublisher extends AuctionPublisherPort {
     await this.kafkaService.send({
       topic: `auction.bidder.created`,
       messages: [{ key: event.auctionUuid + Math.random(), value: JSON.stringify(event) }],
-      acks: -1,
     });
   };
 }

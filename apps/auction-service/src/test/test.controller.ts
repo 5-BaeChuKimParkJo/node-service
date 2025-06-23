@@ -28,7 +28,7 @@ export class TestController {
   async getDbUpdate() {
     console.time('db-update');
     await Promise.all(
-      Array.from({ length: 10000 }).map(async () => {
+      Array.from({ length: 100000 }).map(async () => {
         const res = await this.prisma.test.update({
           where: {
             testId: '6853bb1a-d148-8008-b3c0-7b9e24190b62',
@@ -63,19 +63,25 @@ export class TestController {
 
   @Get('/kafka-send')
   async getKafkaSend() {
+    console.log('rlrl');
     console.time('kafka-send');
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < 1; i++) {
       await Promise.all(
-        Array.from({ length: 100 }).map(
+        Array.from({ length: 500000 }).map(
           async () =>
             await this.kafkaService.send({
               topic: `testt`,
-              messages: [{ key: String(Math.random()), value: JSON.stringify({ test: 'test' }) }],
-              acks: -1,
+              messages: [{ key: 'same-key', value: JSON.stringify({ test: 'test' }) }],
+              bulk: true,
             }),
         ),
       );
     }
+
+    // await this.kafkaService.send({
+    //   topic: `testt`,
+    //   messages: [{ key: String(Math.random()), value: JSON.stringify({ test: 'test' }) }],
+    // });
     console.timeEnd('kafka-send');
     return 1;
   }
