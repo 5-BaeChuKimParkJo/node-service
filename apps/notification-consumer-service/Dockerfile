@@ -24,11 +24,11 @@ WORKDIR /usr/src/app
 
 COPY package*.json ./
 
-RUN npm install --prod pm2
+RUN npm install --prod
 
 COPY --from=development /usr/src/app/dist ./dist
 
-CMD ["pm2-runtime", "--name", "notification-consumer-service", "dist/apps/notification-consumer-service/main.js", "-i", "max"]  
+CMD ["node", "dist/apps/notification-consumer-service/main"]
 
 
 

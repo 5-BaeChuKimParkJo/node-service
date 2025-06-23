@@ -27,7 +27,7 @@ WORKDIR /usr/src/app
 
 COPY package*.json ./
 
-RUN npm install -g prisma pm2
+RUN npm install -g prisma
 
 RUN npm install
 COPY apps/auction-service/src/prisma/schema/schema.prisma apps/auction-service/src/prisma/schema/schema.prisma
@@ -36,4 +36,4 @@ RUN npm prune --prod
 
 COPY --from=development /usr/src/app/dist ./dist
 
-CMD ["pm2-runtime", "--name", "auction-service", "dist/apps/auction-service/main.js", "-i", "max"]
+CMD ["node", "dist/apps/auction-service/main"]
