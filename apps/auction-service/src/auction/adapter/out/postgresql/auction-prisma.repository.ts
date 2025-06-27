@@ -8,12 +8,13 @@ import AuctionForUpdateDomain from '../../../domain/model/auction-for-update.dom
 import AuctionForDeleteDomain from '../../../domain/model/auction-for-delete.domain';
 import {
   AuctionBiddersReturn,
+  Auctions,
   AuctionsAdminReturn,
   AuctionsReturn,
 } from '../../../application/port/out/auction-repository.port.type';
 import AuctionBidderForCreateDomain from '../../../domain/model/auction-bidder-for-create.domain';
 import AuctionBidderDomain from '../../../domain/model/auction-bidder.domain';
-import { AuctionChangedValue, ErrorCode, AppException } from '@app/common';
+import { ErrorCode, AppException, KafkaAuctionServiceOutboxTopicValue } from '@app/common';
 import { AuctionCommand } from '../../../application/port/dto/auction.command';
 import { AuctionAdminCommand } from '../../../application/port/dto/auction-admin.command';
 import AuctionAdminDomain from '../../../domain/model/auction-admin.domain';
@@ -25,6 +26,8 @@ import { AuctionsByIdsCommand } from '../../../application/port/dto/auctions-by-
 import { AuctionsByIdsAdminCommand } from '../../../application/port/dto/auctions-by-ids-admin.command';
 import { toNumber } from '@app/common/utils/number.utils';
 import { S3Service } from '@app/common/s3/s3.service';
+import AuctionBidderForCreateBulkDomain from '../../../domain/model/auction-bidder-for-create-bulk.domain';
+import AuctionViewedForCreateBulkDomain from '../../../domain/model/auction-viewed-for-create-bulk.domain';
 
 @Injectable()
 export class AuctionPrismaRepository extends AuctionRepositoryPort {
@@ -84,10 +87,10 @@ export class AuctionPrismaRepository extends AuctionRepositoryPort {
     }
   }
 
-  override findAcutionCurrentBidderForUpdate = async (auctionUuid: string, tx?: TX): Promise<string | null> => {
+  override findAcutionForUpdate = async (auctionUuid: string, tx?: TX): Promise<AuctionDomain> => {
     const prisma = tx ?? this.prisma;
-    const res = await prisma.$queryRaw<{ currentBidderUuid: string | null }[]>`
-      SELECT "currentBidderUuid"
+    const res = await prisma.$queryRaw<Auctions[]>`
+      SELECT *
       FROM "Auctions"
       WHERE "auctionUuid" = ${auctionUuid}::uuid
       FOR UPDATE;
@@ -99,7 +102,11 @@ export class AuctionPrismaRepository extends AuctionRepositoryPort {
         HttpStatus.NOT_FOUND,
       );
     }
-    return res[0].currentBidderUuid;
+    return new AuctionDomain({
+      ...res[0],
+      status: 'visible',
+      images: [],
+    });
   };
 
   override findAuctionsByIds(args: AuctionsByIdsCommand): Promise<AuctionDomain[]>;
@@ -117,7 +124,6 @@ export class AuctionPrismaRepository extends AuctionRepositoryPort {
         auctionImages: true,
       },
     });
-
     if (type === 'user') {
       return rows.map(
         (row) =>
@@ -194,7 +200,6 @@ export class AuctionPrismaRepository extends AuctionRepositoryPort {
       orderBy: [{ createdAt: 'desc' }, { auctionUuid: 'desc' }],
       take: pageSize,
     });
-
     const hasNext = rows.length > limit;
     const items = hasNext ? rows.slice(0, limit) : rows;
     const lastItem = items[items.length - 1];
@@ -286,6 +291,19 @@ export class AuctionPrismaRepository extends AuctionRepositoryPort {
     });
   };
 
+  override updateAuctionCurrent = async (
+    auctionUuid: string,
+    currentBid: bigint,
+    currentBidderUuid: string,
+    tx?: TX,
+  ): Promise<void> => {
+    const prisma = tx ?? this.prisma;
+    await prisma.auctions.update({
+      where: { auctionUuid },
+      data: { currentBid, currentBidderUuid },
+    });
+  };
+
   override deleteAuction = async (auctionForDelete: AuctionForDeleteDomain): Promise<void> => {
     const { auctionUuid } = auctionForDelete.getSnapshot();
     return await this.prisma.$transaction(async (tx) => {
@@ -311,6 +329,18 @@ export class AuctionPrismaRepository extends AuctionRepositoryPort {
         bidAmount,
         auctionId,
       },
+    });
+  };
+
+  override createAuctionBidders = async (auctionBidders: AuctionBidderForCreateBulkDomain, tx?: TX): Promise<void> => {
+    const prisma = tx ?? this.prisma;
+    await prisma.auctionBidders.createMany({
+      data: auctionBidders.getSnapshot().map((bidder) => ({
+        auctionId: bidder.auctionId,
+        bidAmount: bidder.bidAmount,
+        bidderUuid: bidder.bidderUuid,
+        createdAt: bidder.createdAt,
+      })),
     });
   };
 
@@ -380,7 +410,7 @@ export class AuctionPrismaRepository extends AuctionRepositoryPort {
     const prisma = tx ?? this.prisma;
     const snapshot = auction.getSnapshot();
     const { auctionId: _, ...row } = snapshot;
-    const auctionChangedValue: AuctionChangedValue = {
+    const auctionChangedValue: KafkaAuctionServiceOutboxTopicValue = {
       aggregateType: 'auction',
       aggregateId: snapshot.auctionUuid,
       eventType: op === 'c' ? 'AuctionCreated' : op === 'u' ? 'AuctionUpdated' : 'AuctionDeleted',
@@ -399,5 +429,15 @@ export class AuctionPrismaRepository extends AuctionRepositoryPort {
       },
     };
     await prisma.outbox.create({ data: auctionChangedValue });
+  };
+
+  override createAuctionViewedBulk = async (
+    auctionViewed: AuctionViewedForCreateBulkDomain,
+    tx?: TX,
+  ): Promise<void> => {
+    const prisma = tx ?? this.prisma;
+    await prisma.auctionViewed.createMany({
+      data: auctionViewed.getSnapshot(),
+    });
   };
 }

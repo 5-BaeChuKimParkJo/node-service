@@ -19,6 +19,7 @@ export type AuctionAdminResponse = {
   viewCount: bigint;
   thumbnailUrl: string;
   createdAt: Date;
+  soldAt?: Date | null;
   sellerUuid: string;
   tagIds: number[];
   images: AuctionImageResponse[];

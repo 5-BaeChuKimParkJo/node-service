@@ -18,6 +18,11 @@ import {
 } from '../src/auction/adapter/in/web/dto/update-auction.dto';
 import { CreateAuctionBidderRequestDto } from '../src/auction/adapter/in/web/dto/create-auction-bidder.dto';
 import { AuctionBiddersResponseDto } from '../src/auction/adapter/in/web/dto/auction-bidders.dto';
+import { KafkaService } from '@app/common/kafka/kafka.service';
+import { RedisModule } from '@app/common/redis/redis.module';
+
+const userToken =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJlM2VkZWM4OS0yMjRkLTRkNmEtOGM1NS0zNDcyMzJkYTM0YzIifQ.kaK2nXssT_yG3Z5q0jJnBhXBQFnbZoiQ-UpQENKgwBg';
 
 describe('AuctionService e2e', () => {
   let app: INestApplication;
@@ -25,7 +30,7 @@ describe('AuctionService e2e', () => {
   beforeAll(async () => {
     execSync('docker compose -f docker-compose.test.yml up -d', { stdio: 'inherit' });
     execSync('sleep 3');
-    execSync('pnpm run prisma:auction-service:deploy', { stdio: 'inherit' });
+    execSync('npm run prisma:auction-service:deploy', { stdio: 'inherit' });
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     })
@@ -46,6 +51,10 @@ describe('AuctionService e2e', () => {
         }),
         toFullUrl: vitest.fn().mockImplementation((key: string) => `https://mocked-url/${key}`),
         checkFileExists: vitest.fn().mockResolvedValue(undefined),
+      })
+      .overrideProvider(KafkaService)
+      .useValue({
+        send: vitest.fn(),
       })
       .compile();
 
@@ -74,10 +83,7 @@ describe('AuctionService e2e', () => {
     for (let i = 0; i < 30; i++) {
       const res = await request(app.getHttpServer())
         .post('/api/v1/auctions')
-        .set(
-          'Authorization',
-          'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJlM2VkZWM4OS0yMjRkLTRkNmEtOGM1NS0zNDcyMzJkYTM0YzIifQ.kaK2nXssT_yG3Z5q0jJnBhXBQFnbZoiQ-UpQENKgwBg',
-        )
+        .set('Authorization', `Bearer ${userToken}`)
         .send({
           categoryId: i,
           directDealLocation: `directDealLocation-${i}`,
@@ -160,10 +166,7 @@ describe('AuctionService e2e', () => {
     const item = listBody.items[0];
     const res = await request(app.getHttpServer())
       .put(`/api/v1/auctions/${item.auctionUuid}`)
-      .set(
-        'Authorization',
-        'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJlZjNjZjBmMy02MmI4LTQzNzEtYTAxNC02NDNmODIzMjNlZmQiLCJyb2xlIjoiYWRtaW4iLCJpYXQiOjE3MTcwMDQ2NTZ9.-ZlQ1vmiXGZ16YVCgTbn_pGmKxKKzE2fvz3vnMQW93U',
-      )
+      .set('Authorization', `Bearer ${userToken}`)
       .send({
         title: 'updated-title',
         description: 'updated-description',
@@ -192,10 +195,7 @@ describe('AuctionService e2e', () => {
     const item = listBody.items[0];
     const res = await request(app.getHttpServer())
       .delete(`/api/v1/auctions/${item.auctionUuid}`)
-      .set(
-        'Authorization',
-        'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJlZjNjZjBmMy02MmI4LTQzNzEtYTAxNC02NDNmODIzMjNlZmQiLCJyb2xlIjoiYWRtaW4iLCJpYXQiOjE3MTcwMDQ2NTZ9.-ZlQ1vmiXGZ16YVCgTbn_pGmKxKKzE2fvz3vnMQW93U',
-      );
+      .set('Authorization', `Bearer ${userToken}`);
 
     expect(res.status).toBe(200);
 
@@ -223,10 +223,7 @@ describe('AuctionService e2e', () => {
 
     const res = await request(app.getHttpServer())
       .post(`/api/v1/auctions/${item.auctionUuid}/bidders`)
-      .set(
-        'Authorization',
-        'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySWQiOiJkMzhkNjk0Yy00MDY0LTQyNTgtYTUzMy1lNzE3NTI3YmU2OWQifQ.B1YVXsLtYtorkKiiHpZbWZOzv6GMkXaENmBcCvX-cto',
-      )
+      .set('Authorization', `Bearer ${userToken}`)
       .send({
         bidAmount: 10000,
       } satisfies CreateAuctionBidderRequestDto);

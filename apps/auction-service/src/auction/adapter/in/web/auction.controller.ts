@@ -28,6 +28,8 @@ import { AuctionsByIdsUseCase } from '../../../application/port/in/auctions-by-i
 import { AuctionsByIdsDtoMapper } from './mapper/auctions-by-ids-dto.mapper';
 import { CreateAuctionBidderKafkaDtoMapper } from './mapper/create-auction-bidder-kafka-dto.mapper';
 import { CreateAuctionBidderKafkaUseCase } from '../../../application/port/in/create-auction-bidder-kafka.use-case';
+import { AuctionSoldUseCase } from '../../../application/port/in/auction-sold.use-case';
+import { AuctionSoldDtoMapper } from './mapper/auction-sold-dto.mapper';
 
 @Controller('/auctions')
 export class AuctionController {
@@ -42,6 +44,7 @@ export class AuctionController {
     private readonly auctionBiddersUseCase: AuctionBiddersUseCase,
     private readonly createAuctionBidderUseCase: CreateAuctionBidderUseCase,
     private readonly createAuctionBidderKafkaUseCase: CreateAuctionBidderKafkaUseCase,
+    private readonly auctionSoldUseCase: AuctionSoldUseCase,
   ) {}
 
   @Version('1')
@@ -146,6 +149,7 @@ export class AuctionController {
   @Version('1')
   @Get(':auctionUuid/bidders')
   @ApiBearerAuth()
+  @ApiOkResponse({ type: AuctionBiddersResponseDto })
   async auctionBiddersV1(
     @Param('auctionUuid') auctionUuid: string,
     @Query() requestDto: AuctionBiddersRequestDto,
@@ -153,5 +157,13 @@ export class AuctionController {
     const command = AuctionBiddersDtoMapper.toCommand(auctionUuid, requestDto);
     const response = await this.auctionBiddersUseCase.execute(command);
     return AuctionBiddersDtoMapper.fromResponse(response);
+  }
+
+  @Version('1')
+  @Post(':auctionUuid/complete')
+  @ApiBearerAuth()
+  async auctionSoldV1(@Param('auctionUuid') auctionUuid: string, @JwtUser() user: User): Promise<void> {
+    const command = AuctionSoldDtoMapper.toCommand(auctionUuid);
+    const response = await this.auctionSoldUseCase.execute(command, user);
   }
 }

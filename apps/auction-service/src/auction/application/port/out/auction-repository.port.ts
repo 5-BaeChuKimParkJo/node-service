@@ -1,9 +1,11 @@
 import AuctionAdminDomain from '../../../domain/model/auction-admin.domain';
+import AuctionBidderForCreateBulkDomain from '../../../domain/model/auction-bidder-for-create-bulk.domain';
 import AuctionBidderForCreateDomain from '../../../domain/model/auction-bidder-for-create.domain';
 import AuctionBidderDomain from '../../../domain/model/auction-bidder.domain';
 import AuctionForCreateDomain from '../../../domain/model/auction-for-create.domain';
 import AuctionForDeleteDomain from '../../../domain/model/auction-for-delete.domain';
 import AuctionForUpdateDomain from '../../../domain/model/auction-for-update.domain';
+import AuctionViewedForCreateBulkDomain from '../../../domain/model/auction-viewed-for-create-bulk.domain';
 import AuctionDomain from '../../../domain/model/auction.domain';
 import { AuctionAdminCommand } from '../dto/auction-admin.command';
 import { AuctionBiddersCommand } from '../dto/auction-bidders.command';
@@ -29,7 +31,7 @@ export abstract class AuctionRepositoryPort {
 
   abstract findAuction(args: AuctionCommand): Promise<AuctionDomain>;
   abstract findAuction(args: AuctionAdminCommand): Promise<AuctionAdminDomain>;
-  abstract findAcutionCurrentBidderForUpdate: (auctionUuid: string, tx?: TX) => Promise<string | null>;
+  abstract findAcutionForUpdate: (auctionUuid: string, tx?: TX) => Promise<AuctionDomain>;
 
   abstract findAuctions(args: AuctionsCommand): Promise<AuctionsReturn>;
   abstract findAuctions(args: AuctionsAdminCommand): Promise<AuctionsAdminReturn>;
@@ -40,12 +42,19 @@ export abstract class AuctionRepositoryPort {
   abstract createAuction: (auctionForCreate: AuctionForCreateDomain) => Promise<AuctionDomain>;
 
   abstract updateAuction: (auctionForUpdate: AuctionForUpdateDomain) => Promise<AuctionDomain>;
+  abstract updateAuctionCurrent: (
+    auctionUuid: string,
+    currentBid: bigint,
+    currentBidderUuid: string,
+    tx?: TX,
+  ) => Promise<void>;
 
   abstract deleteAuction: (auctionForDelete: AuctionForDeleteDomain) => Promise<void>;
 
   abstract findHighestBidder: (auctionUuid: string) => Promise<AuctionBidderDomain | undefined>;
 
   abstract createAuctionBidder: (auctionBidder: AuctionBidderForCreateDomain, tx?: TX) => Promise<void>;
+  abstract createAuctionBidders: (auctionBidder: AuctionBidderForCreateBulkDomain, tx?: TX) => Promise<void>;
 
   abstract updateAuctionCurrentBid: (
     auctionUuid: string,
@@ -55,4 +64,6 @@ export abstract class AuctionRepositoryPort {
   ) => Promise<number>;
 
   abstract findAuctionBidders: (args: AuctionBiddersCommand) => Promise<AuctionBiddersReturn>;
+
+  abstract createAuctionViewedBulk: (auctionViewed: AuctionViewedForCreateBulkDomain) => Promise<void>;
 }

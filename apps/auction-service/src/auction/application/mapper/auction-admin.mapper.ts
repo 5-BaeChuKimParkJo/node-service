@@ -28,6 +28,8 @@ export class AuctionAdminMapper {
       categoryId: snapshot.categoryId,
       directDealLocation: snapshot.directDealLocation,
       tagIds: snapshot.tagIds,
+      currentBidderUuid: snapshot.currentBidderUuid,
+      soldAt: snapshot.soldAt,
       images: snapshot.images.map((image) => ({
         auctionImageId: image.auctionImageId,
         url: this.auctionFileStoragePort.toFullUrl(image.key),

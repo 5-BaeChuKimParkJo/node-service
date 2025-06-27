@@ -5,6 +5,8 @@ import { AuctionFileStoragePort } from '../../application/port/out/auction-file-
 import { AuctionS3Storage } from './s3/auction-s3.storage';
 import { AuctionPublisherPort } from '../../application/port/out/auction-publisher-port';
 import { AuctionKafkaPublisher } from './kafka/auction-kafka.publisher';
+import { AuctionCachePort } from '../../application/port/out/auction-cache.port';
+import { AuctionRedisCache } from './redis/auction-redis.cache';
 
 export const auctionPortProviders: Provider[] = [
   {
@@ -18,5 +20,9 @@ export const auctionPortProviders: Provider[] = [
   {
     provide: AuctionPublisherPort,
     useClass: AuctionKafkaPublisher,
+  },
+  {
+    provide: AuctionCachePort,
+    useClass: AuctionRedisCache,
   },
 ];

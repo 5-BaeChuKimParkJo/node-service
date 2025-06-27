@@ -15,14 +15,7 @@ export class TestController {
   }
 
   @Get('/db')
-  async getDb() {
-    const res = await this.prisma.test.findUnique({
-      where: {
-        testId: '6853bb1a-d148-8008-b3c0-7b9e24190b62',
-      },
-    });
-    return 1;
-  }
+  async getDb() {}
 
   @Get('/db/update')
   async getDbUpdate() {

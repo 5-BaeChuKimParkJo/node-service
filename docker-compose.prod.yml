@@ -1,0 +1,16 @@
+services:
+  auction-service:
+    build:
+      context: .
+      dockerfile: ./apps/auction-service/Dockerfile
+      target: development
+    command: npx pm2-runtime dist/apps/auction-service/main.js --name auction-service -i max
+    ports:
+      - '3001:3000'
+    volumes:
+      - ./apps/auction-service:/usr/src/app/apps/auction-service
+      - ./libs:/usr/src/app/libs
+      - /usr/src/app/apps/auction-service/src/prisma/generated
+    env_file:
+      - ./libs/common/.env
+      - ./apps/auction-service/.env

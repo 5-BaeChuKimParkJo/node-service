@@ -5,11 +5,9 @@ import { tokens } from '../common/jwt.js';
 
 export const options: Options = {
   stages: [
-    { target: 100, duration: '30s' },
-    { target: 300, duration: '30s' },
-    { target: 500, duration: '30s' },
-    { target: 1000, duration: '30s' },
-    { target: 0, duration: '30s' },
+    { target: 100, duration: '5s' },
+    { target: 10000, duration: '10s' },
+    { target: 0, duration: '5s' },
   ],
 };
 
@@ -49,5 +47,5 @@ export default function () {
       } as CustomLog),
     );
   }
-  sleep(0.2);
+  sleep(1);
 }

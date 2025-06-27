@@ -14,11 +14,13 @@ export type AuctionResponse = {
   endAt: Date;
   isDirectDeal: boolean;
   directDealLocation?: string | null;
+  currentBidderUuid: string | null;
   status: 'waiting' | 'active' | 'ended';
   productCondition: 'unopened' | 'new' | 'used';
   viewCount: bigint;
   thumbnailUrl: string;
   createdAt: Date;
+  soldAt?: Date | null;
   sellerUuid: string;
   tagIds: number[];
   images: AuctionImageResponse[];

@@ -1,7 +1,7 @@
 import { ExceptionFilter, Catch, ArgumentsHost } from '@nestjs/common';
 import { ZodError } from 'zod';
-import { ErrorCode } from '../utils';
 import { FastifyReply } from 'fastify';
+import { ErrorCode } from '../common';
 
 @Catch(ZodError)
 export class ZodExceptionFilter implements ExceptionFilter {

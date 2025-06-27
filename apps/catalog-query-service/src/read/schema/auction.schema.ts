@@ -1,11 +1,11 @@
 import { z } from 'zod';
-import { remoteMemberSchema } from './remote-member.schema';
-import { catalogAuctionSchema } from '../../sync/schema/catalog.schema';
+import { httpMemberSchema } from './http-member.schema';
+import { mongoCatalogTypeAuctionSchema } from '../../common/schema/mongo-catalog.schema';
 
-export const auctionSchema = catalogAuctionSchema
+export const auctionSchema = mongoCatalogTypeAuctionSchema
   .merge(
     z.object({
-      seller: remoteMemberSchema,
+      seller: httpMemberSchema,
     }),
   )
   .omit({ sellerUuid: true });
