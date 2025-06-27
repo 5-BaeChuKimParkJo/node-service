@@ -20,6 +20,7 @@ export const auctionForUpdatePropsSchema = auctionPropsSchema
         categoryId: true,
         directDealLocation: true,
         tagIds: true,
+        soldAt: true,
       })
       .merge(
         z.object({

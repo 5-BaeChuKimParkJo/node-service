@@ -1,3 +1,4 @@
+import { Prisma } from 'apps/auction-service/src/prisma/generated';
 import AuctionAdminDomain from '../../../domain/model/auction-admin.domain';
 import AuctionBidderDomain from '../../../domain/model/auction-bidder.domain';
 import AuctionDomain from '../../../domain/model/auction.domain';
@@ -24,3 +25,5 @@ export type AuctionBiddersReturn = {
   } | null;
   items: AuctionBidderDomain[];
 };
+
+export type Auctions = Prisma.AuctionsGetPayload<{}>;

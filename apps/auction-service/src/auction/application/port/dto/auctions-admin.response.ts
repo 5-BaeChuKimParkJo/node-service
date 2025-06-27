@@ -24,9 +24,11 @@ type AuctionsItemResponse = {
   viewCount: bigint;
   thumbnailUrl: string;
   createdAt: Date;
+  soldAt?: Date | null;
   sellerUuid: string;
   tagIds: number[];
   images: AuctionsImageResponse[];
+  currentBidderUuid: string | null;
 };
 
 export type AuctionsAdminResponse = {

@@ -29,6 +29,7 @@ export class AuctionDtoMapper {
       createdAt: response.createdAt.toISOString(),
       sellerUuid: response.sellerUuid,
       tagIds: response.tagIds,
+      soldAt: response.soldAt?.toISOString() ?? null,
       images: response.images.map(
         (image) =>
           ({

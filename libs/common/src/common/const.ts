@@ -8,6 +8,7 @@ export const ErrorCode = {
   NOT_FOUND: 1006,
   DB_ERROR: 1007,
   OTHER_SERVICE_ERROR: 1008,
+  KAFKA_COMMIT_ERROR: 1009,
 } satisfies Record<string, number>;
 
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];

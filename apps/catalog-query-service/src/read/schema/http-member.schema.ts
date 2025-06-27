@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const remoteMemberSchema = z.object({
+export const httpMemberSchema = z.object({
   memberUuid: z.string(),
   nickname: z.string(),
   gradeUuid: z.string(),
@@ -10,4 +10,4 @@ export const remoteMemberSchema = z.object({
   point: z.number().nullable(),
 });
 
-export type RemoteMember = z.infer<typeof remoteMemberSchema>;
+export type HttpMember = z.infer<typeof httpMemberSchema>;

@@ -13,6 +13,7 @@ export const auctionPropsSchema = z
     description: z.string().max(1000, { message: '내용을 1000자 이내로 입력해 주세요' }),
     minimumBid: z.bigint(),
     currentBid: z.bigint(),
+    currentBidderUuid: z.string().uuid({ message: 'UUID의 형식이 올바르지 않습니다.' }).nullable(),
     startAt: z.date().refine(isTimeTruncated, {
       message: '경매 시작시각은 정각이어야 합니다.',
     }),
@@ -26,6 +27,7 @@ export const auctionPropsSchema = z
     viewCount: z.bigint(),
     thumbnailKey: z.string(),
     createdAt: z.date(),
+    soldAt: z.date().nullable(),
     sellerUuid: z.string().uuid({ message: '경매 UUID의 형식이 올바르지 않습니다.' }),
     tagIds: z.array(z.number()),
     version: z.number(),

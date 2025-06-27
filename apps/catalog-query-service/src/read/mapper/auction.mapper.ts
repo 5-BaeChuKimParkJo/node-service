@@ -1,13 +1,14 @@
 import { AppException, ErrorCode } from '@app/common';
-import { CatalogAuctionResponseDto } from '../dto/auction-dto';
+import { AuctionResponseDto } from '../dto/auction-dto';
 import { Auction } from '../schema/auction.schema';
 import { HttpStatus } from '@nestjs/common';
 
 export class AuctionMapper {
-  static toResponseDto = (auction: Auction): CatalogAuctionResponseDto => {
+  static toResponseDto = (auction: Auction): AuctionResponseDto => {
     return {
       ...auction,
       status: AuctionMapper.mapAuctionStatus(auction),
+      soldAt: auction.soldAt ? auction.soldAt.toISOString() : null,
       startAt: auction.startAt.toISOString(),
       endAt: auction.endAt.toISOString(),
       createdAt: auction.createdAt.toISOString(),

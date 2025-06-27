@@ -1,6 +1,21 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { CategoryResponseDto, MemberResponseDto, TagResponseDto } from './common-dto';
+
+class AuctionImageResponseDto {
+  @ApiProperty({ type: Number })
+  auctionImageId!: number;
+
+  @ApiProperty({ type: String })
+  url!: string;
+
+  @ApiProperty({ type: Number })
+  order!: number;
+}
 
 export class AuctionResponseDto {
+  @ApiProperty({ enum: ['auction'] })
+  type!: 'auction';
+
   @ApiProperty({ type: String })
   auctionUuid!: string;
 
@@ -37,6 +52,9 @@ export class AuctionResponseDto {
   @ApiProperty({ type: Date })
   createdAt!: string;
 
+  @ApiProperty({ type: Date, nullable: true })
+  soldAt!: string | null;
+
   @ApiProperty({ type: Number })
   version!: number;
 
@@ -45,64 +63,6 @@ export class AuctionResponseDto {
 
   @ApiProperty({ enum: ['waiting', 'active', 'ended'] })
   status!: 'waiting' | 'active' | 'ended';
-}
-
-export class CategoryResponseDto {
-  @ApiProperty({ type: Number })
-  categoryId!: number;
-
-  @ApiProperty({ type: String })
-  name!: string;
-
-  @ApiProperty({ type: String })
-  description!: string;
-
-  @ApiProperty({ type: String, nullable: true })
-  imageUrl?: string | null;
-}
-
-export class ImageResponseDto {
-  @ApiProperty({ type: Number })
-  auctionImageId!: number;
-
-  @ApiProperty({ type: String })
-  url!: string;
-
-  @ApiProperty({ type: Number })
-  order!: number;
-}
-
-export class TagResponseDto {
-  @ApiProperty({ type: Number })
-  tagId!: number;
-
-  @ApiProperty({ type: String })
-  name!: string;
-}
-
-export class MemberResponseDto {
-  @ApiProperty({ type: String })
-  memberUuid!: string;
-
-  @ApiProperty({ type: String })
-  nickname!: string;
-
-  @ApiProperty({ type: String })
-  gradeUuid!: string;
-
-  @ApiProperty({ enum: ['NICE_GUY', 'GOOD_BOY', 'REAL_MAN'], nullable: true })
-  honor?: string | null;
-
-  @ApiProperty({ enum: ['ACTIVE', 'INACTIVE', 'BLOCKED'] })
-  state!: string;
-
-  @ApiProperty({ type: String, nullable: true })
-  profileImageUrl?: string | null;
-}
-
-export class CatalogAuctionResponseDto extends AuctionResponseDto {
-  @ApiProperty({ enum: ['auction'] })
-  type!: 'auction';
 
   @ApiProperty({ type: CategoryResponseDto, nullable: true })
   category!: CategoryResponseDto | null;
@@ -113,6 +73,6 @@ export class CatalogAuctionResponseDto extends AuctionResponseDto {
   @ApiProperty({ type: MemberResponseDto })
   seller!: MemberResponseDto;
 
-  @ApiProperty({ type: [ImageResponseDto] })
-  images!: ImageResponseDto[];
+  @ApiProperty({ type: [AuctionImageResponseDto] })
+  images!: AuctionImageResponseDto[];
 }
