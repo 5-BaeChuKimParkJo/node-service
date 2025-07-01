@@ -39,7 +39,7 @@ export class ReadRepository {
         () =>
           this.db
             .collection('catalog')
-            .find({ _id: { $in: productUuids as any[] } })
+            .find({ productUuid: { $in: productUuids as any[] } })
             .toArray(),
         (error) =>
           new AppException({ code: ErrorCode.DB_ERROR, message: String(error) }, HttpStatus.INTERNAL_SERVER_ERROR),
