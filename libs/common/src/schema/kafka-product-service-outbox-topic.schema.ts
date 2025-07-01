@@ -23,7 +23,7 @@ export const kafkaProductServiceOutboxTopicValueSchema = z.object({
         thumbnailKey: z.string().nullable(),
         viewCount: z.number(),
         price: z.number(),
-        ticketUuid: z.string().uuid().nullable(),
+        ticketUuid: z.string().nullable(),
         imageList: z.null(),
         imageUrlList: z.array(
           z.object({
