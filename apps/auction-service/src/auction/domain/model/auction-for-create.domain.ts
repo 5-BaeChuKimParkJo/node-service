@@ -30,12 +30,12 @@ export default class AuctionForCreateDomain {
       );
     }
 
-    if (new Date() > input.startAt) {
-      throw new AppException(
-        { message: '경매 시작일은 현재 시간 이후여야 합니다.', code: ErrorCode.VALIDATION_ERROR },
-        HttpStatus.BAD_REQUEST,
-      );
-    }
+    // if (new Date() > input.startAt) {
+    //   throw new AppException(
+    //     { message: '경매 시작일은 현재 시간 이후여야 합니다.', code: ErrorCode.VALIDATION_ERROR },
+    //     HttpStatus.BAD_REQUEST,
+    //   );
+    // }
 
     if (add(input.startAt, { hours: 1 }) > input.endAt) {
       throw new AppException(
