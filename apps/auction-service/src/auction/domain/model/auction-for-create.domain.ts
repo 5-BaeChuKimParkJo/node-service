@@ -44,14 +44,14 @@ export default class AuctionForCreateDomain {
       );
     }
 
-    for (const { key } of input.images) {
-      if (!key.startsWith(`auction/${user.memberUuid}/images/`)) {
-        throw new AppException(
-          { message: '이미지 키가 올바르지 않습니다.', code: ErrorCode.VALIDATION_ERROR },
-          HttpStatus.BAD_REQUEST,
-        );
-      }
-    }
+    // for (const { key } of input.images) {
+    //   if (!key.startsWith(`auction/${user.memberUuid}/images/`)) {
+    //     throw new AppException(
+    //       { message: '이미지 키가 올바르지 않습니다.', code: ErrorCode.VALIDATION_ERROR },
+    //       HttpStatus.BAD_REQUEST,
+    //     );
+    //   }
+    // }
 
     const props: AuctionForCreateProps = {
       ...input,

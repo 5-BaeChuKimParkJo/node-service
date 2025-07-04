@@ -1,0 +1,23 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DB_URL")
+}
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x"]
+  output        = "../generated"
+}
+
+model Notification {
+  notificationId BigInt   @id @default(autoincrement())
+  memberUuid     String   @db.Uuid
+  message        String
+  type           String
+  data           Json
+  isRead         Boolean  @default(false)
+  createdAt      DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt      DateTime @updatedAt @db.Timestamptz(6)
+
+  @@index([memberUuid, createdAt])
+}

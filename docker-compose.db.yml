@@ -33,3 +33,21 @@ services:
       timeout: 5s
       retries: 10
       start_period: 5s
+
+  postgres-notification-consumer-service:
+    image: postgres:17
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: postgres
+    ports:
+      - '6003:5432'
+    volumes:
+      - ./volumes/postgres/notification-consumer-service:/var/lib/postgresql/data
+    command: ['postgres', '-c', 'wal_level=logical']
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
