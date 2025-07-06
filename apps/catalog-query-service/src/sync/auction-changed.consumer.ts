@@ -2,8 +2,8 @@ import { KafkaService } from '@app/common/kafka/kafka.service';
 import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { Consumer } from 'kafkajs';
 import { SyncService } from './sync.service';
-import { outboxSchema } from './schema/outbox.schema';
-import { auctionChangedValueSchema } from '@app/common';
+import { kafkaAuctionServiceOutboxTopicValueSchema } from '../../../../libs/common/src/schema/kafka-auction-service-outbox-topic.schema';
+import { KafkaDlqTopicValue } from '@app/common/schema/kafka-dlq-topic.schema';
 
 @Injectable()
 export class AuctionChangedConsumer implements OnModuleInit, OnModuleDestroy {
@@ -32,16 +32,9 @@ export class AuctionChangedConsumer implements OnModuleInit, OnModuleDestroy {
         try {
           const values = batch.messages
             .map((message) => message.value?.toString() ?? '{}')
-            .map((value) => outboxSchema.safeParse(JSON.parse(value)))
+            .map((value) => kafkaAuctionServiceOutboxTopicValueSchema.safeParse(JSON.parse(value)))
             .filter((safeParsed) => safeParsed.success)
-            .map((safeParsed) => safeParsed.data)
-            .filter(
-              (value) =>
-                value.eventType === 'AuctionCreated' ||
-                value.eventType === 'AuctionUpdated' ||
-                value.eventType === 'AuctionDeleted',
-            )
-            .map((value) => auctionChangedValueSchema.parse(value));
+            .map((safeParsed) => safeParsed.data);
 
           if (values.length !== 0) await this.syncService.changeAuction(values);
 
@@ -53,7 +46,7 @@ export class AuctionChangedConsumer implements OnModuleInit, OnModuleDestroy {
           this.retryCount++;
           if (this.retryCount > 3) {
             await this.kafkaService.send({
-              topic: 'auction-service.outbox.dql',
+              topic: 'auction-service.outbox.dlq',
               messages: [
                 {
                   key: `${batch.topic}-${batch.partition}-${batch.lastOffset()}`,
@@ -64,10 +57,9 @@ export class AuctionChangedConsumer implements OnModuleInit, OnModuleDestroy {
                     topic: batch.topic,
                     error: String(error),
                     timestamp: new Date(),
-                  }),
+                  } satisfies KafkaDlqTopicValue),
                 },
               ],
-              acks: -1,
             });
             console.error('3회이상 에러남ㅠ', error);
 

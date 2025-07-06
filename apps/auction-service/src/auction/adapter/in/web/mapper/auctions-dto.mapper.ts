@@ -39,6 +39,7 @@ export class AuctionsDtoMapper {
             viewCount: toNumber(item.viewCount),
             thumbnailUrl: item.thumbnailUrl,
             createdAt: item.createdAt.toISOString(),
+            soldAt: item.soldAt?.toISOString() ?? null,
             sellerUuid: item.sellerUuid,
             tagIds: item.tagIds,
             images: item.images.map(

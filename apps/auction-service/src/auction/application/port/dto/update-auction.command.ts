@@ -9,6 +9,7 @@ export type UpdateAuctionCommand = {
   productCondition?: 'unopened' | 'new' | 'used';
   thumbnailKey?: string;
   title?: string;
+  soldAt?: Date | null;
   minimumBid?: bigint;
   tagIds?: number[];
   images?: {

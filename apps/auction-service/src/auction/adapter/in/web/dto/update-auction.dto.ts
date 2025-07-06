@@ -33,6 +33,9 @@ export class UpdateAuctionRequestDto {
   @ApiProperty({ required: false, type: String })
   thumbnailKey?: string;
 
+  @ApiProperty({ required: false, type: Date, nullable: true })
+  soldAt?: string | null;
+
   @ApiProperty({ required: false, type: String })
   title?: string;
 
@@ -99,6 +102,9 @@ export class UpdateAuctionResponseDto {
 
   @ApiProperty({ type: Date })
   createdAt!: string;
+
+  @ApiProperty({ type: Date, nullable: true })
+  soldAt!: string | null;
 
   @ApiProperty({ type: String })
   sellerUuid!: string;

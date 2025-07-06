@@ -25,6 +25,7 @@ export class UpdateAuctionDtoMapper {
       thumbnailKey: dto.thumbnailKey,
       categoryId: dto.categoryId,
       tagIds: dto.tagIds,
+      ...(dto.soldAt !== undefined && { soldAt: dto.soldAt === null ? null : parseISO(dto.soldAt) }),
     };
   };
 
@@ -46,6 +47,7 @@ export class UpdateAuctionDtoMapper {
       createdAt: response.createdAt.toISOString(),
       sellerUuid: response.sellerUuid,
       tagIds: response.tagIds,
+      soldAt: response.soldAt?.toISOString() ?? null,
       images: response.images.map(
         (image) =>
           ({

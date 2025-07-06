@@ -1,11 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { RemoteTag, remoteTagSchema } from './schema/remote-tag.schema';
-import { RemoteCategory, remoteCategorySchema } from './schema/remote-category.schema';
+import { HttpTag, httpTagSchema } from '../common/schema/http-tag.schema';
+import { HttpCategory, httpCategorySchema } from '../common/schema/http-category.schema';
 import z from 'zod';
 import * as F from 'fp-ts/function';
 import * as A from 'fp-ts/Array';
 import * as NEA from 'fp-ts/NonEmptyArray';
 import * as Num from 'fp-ts/number';
+import * as Dat from 'fp-ts/Date';
 import * as O from 'fp-ts/Option';
 import * as TE from 'fp-ts/TaskEither';
 import * as E from 'fp-ts/Either';
@@ -14,7 +15,8 @@ import axios from 'axios';
 import { ConfigService } from '@nestjs/config';
 import { EnvSchema } from '../common/env-schema';
 import { SyncRepository } from './sync.repository';
-import { AuctionChangedValue, U } from '@app/common';
+import { KafkaAuctionServiceOutboxTopicValue, U, KafkaProductServiceOutboxTopicValue } from '@app/common';
+import { MongoCatalogTypeProduct } from '../common/schema/mongo-catalog.schema';
 
 @Injectable()
 export class SyncFn {
@@ -23,7 +25,7 @@ export class SyncFn {
     private readonly syncRepository: SyncRepository,
   ) {}
 
-  fetchCategory = (categoryId: number): TE.TaskEither<string, RemoteCategory> => {
+  fetchCategory = (categoryId: number): TE.TaskEither<string, HttpCategory> => {
     return F.pipe(
       TE.tryCatch(
         () => axios.get(`${this.configService.get('CATEGORY_SERVICE')}/api/v1/category/${categoryId}`),
@@ -32,7 +34,7 @@ export class SyncFn {
       TE.flatMap((res) =>
         TE.fromEither(
           E.tryCatch(
-            () => remoteCategorySchema.parse(res.data),
+            () => httpCategorySchema.parse(res.data),
             (error) => `카테고리 스키마 검증 실패: ${String(error)}`,
           ),
         ),
@@ -40,7 +42,7 @@ export class SyncFn {
     );
   };
 
-  fetchTags = (tagIds: number[]): TE.TaskEither<string, RemoteTag[]> => {
+  fetchTags = (tagIds: number[]): TE.TaskEither<string, HttpTag[]> => {
     return F.pipe(
       TE.tryCatch(
         () =>
@@ -52,7 +54,7 @@ export class SyncFn {
       TE.flatMap((tags) =>
         TE.fromEither(
           E.tryCatch(
-            () => z.array(remoteTagSchema).parse(tags.data),
+            () => z.array(httpTagSchema).parse(tags.data),
             (error) => `태그 스키마 검증 실패: ${String(error)}`,
           ),
         ),
@@ -68,9 +70,11 @@ export class SyncFn {
     );
   };
 
-  upsertAuction = (auctionChangedValues: AuctionChangedValue[]): TE.TaskEither<string, void> => {
+  upsertAuction = (
+    kafkaAuctionServiceOutboxTopicValue: KafkaAuctionServiceOutboxTopicValue[],
+  ): TE.TaskEither<string, void> => {
     return F.pipe(
-      auctionChangedValues,
+      kafkaAuctionServiceOutboxTopicValue,
       A.map((o) => o.payload),
       NEA.fromArray,
       O.map(NEA.max(U.Rec.ordBy('version', Num.Ord))),
@@ -92,6 +96,47 @@ export class SyncFn {
         tags,
       })),
       TE.flatMap(this.syncRepository.upsertCatalogAuction),
+      TE.map(() => undefined),
+    );
+  };
+
+  upsertProduct = (
+    kafkaProductServiceOutboxValues: KafkaProductServiceOutboxTopicValue[],
+  ): TE.TaskEither<string, void> => {
+    return F.pipe(
+      kafkaProductServiceOutboxValues,
+      A.map((o) => o.payload),
+      NEA.fromArray,
+      O.map(NEA.max(U.Rec.ordBy('createdAt', Dat.Ord))),
+      TE.fromOption(() => 'no product'),
+      TE.flatMap((product) =>
+        F.pipe(
+          {
+            category: this.fetchCategory(Number(product.categoryId)),
+            tags: this.fetchTags(product.tagIdList),
+          },
+          Apply.sequenceS(TE.ApplicativePar),
+          TE.let('product', () => product),
+        ),
+      ),
+      TE.map(
+        ({ product, category, tags }) =>
+          ({
+            ...product,
+            type: 'product' as const,
+            category,
+            tags,
+          }) satisfies MongoCatalogTypeProduct,
+      ),
+      TE.flatMap(this.syncRepository.upsertCatalogProduct),
+      TE.map(() => undefined),
+    );
+  };
+
+  deleteProduct = (productUuid: number): TE.TaskEither<string, void> => {
+    return F.pipe(
+      productUuid,
+      this.syncRepository.deleteCatalogProduct,
       TE.map(() => undefined),
     );
   };

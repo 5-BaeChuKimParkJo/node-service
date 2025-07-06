@@ -11,7 +11,8 @@ export default class AuctionForUpdateDomain {
   private props: AuctionForUpdateProps;
 
   constructor(input: AuctionForUpdateArgs, user: User) {
-    if (user.role !== 'admin') {
+    if (Object.keys(input).length === 2 && input.soldAt !== undefined) {
+    } else if (user.role !== 'admin') {
       throw new AppException(
         { message: '관리자 권한이 필요합니다.', code: ErrorCode.FORBIDDEN_ADMIN_REQUIRED },
         HttpStatus.UNAUTHORIZED,

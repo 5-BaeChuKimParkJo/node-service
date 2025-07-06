@@ -5,6 +5,8 @@ import { envValidate } from './common/env-schema';
 import { PrismaModule } from './prisma/prisma.module';
 import { AuctionModule } from './auction/auction.module';
 import { HealthModule } from './health/health.module';
+import { BatchModule } from './batch/batch.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
@@ -12,10 +14,12 @@ import { HealthModule } from './health/health.module';
       isGlobal: true,
       validate: envValidate,
     }),
+    ScheduleModule.forRoot(),
     PrismaModule,
     TestModule,
     AuctionModule,
     HealthModule,
+    BatchModule,
   ],
 })
 export class AppModule {}

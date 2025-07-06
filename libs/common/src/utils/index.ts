@@ -1,3 +1,3 @@
 export * from './date.utils';
-export * from '../common/const';
 export * from './fp-ts';
+export * from './number.utils';
