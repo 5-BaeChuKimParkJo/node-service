@@ -17,7 +17,7 @@ async function bootstrap() {
   });
 
   app.enableCors({
-    origin: /^http:\/\/localhost(:\d+)?$/,
+    origin: [/^http:\/\/localhost(:\d+)?$/, 'https://cabbage-secondhand.shop'],
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     allowedHeaders: 'Content-Type, Accept, Authorization',
     credentials: true,

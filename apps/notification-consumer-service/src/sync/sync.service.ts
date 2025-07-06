@@ -2,7 +2,7 @@ import { PubSubService } from '@app/common/redis/pubsub.service';
 import { RedisService } from '@app/common/redis/redis.service';
 import { SseMessage } from '@app/common/schema/sse.schema';
 import { Injectable } from '@nestjs/common';
-import { CommonMessageValue } from './schema/common-message.schema';
+import { CommonMessageValue } from '../../../../libs/common/src/schema/common-message.schema';
 import { NotificationRepository } from '../notification/notification.repository';
 import * as F from 'fp-ts/function';
 import * as A from 'fp-ts/Array';

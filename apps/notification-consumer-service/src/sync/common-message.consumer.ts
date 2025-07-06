@@ -3,7 +3,7 @@ import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { Consumer } from 'kafkajs';
 import { SyncService } from './sync.service';
 import { KafkaDlqTopicValue } from '@app/common/schema/kafka-dlq-topic.schema';
-import { commonMessageValueSchema } from './schema/common-message.schema';
+import { commonMessageValueSchema } from '../../../../libs/common/src/schema/common-message.schema';
 
 @Injectable()
 export class CommonMessageConsumer implements OnModuleInit, OnModuleDestroy {

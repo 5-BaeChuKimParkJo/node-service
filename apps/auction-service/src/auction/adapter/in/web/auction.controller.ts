@@ -164,6 +164,6 @@ export class AuctionController {
   @ApiBearerAuth()
   async auctionSoldV1(@Param('auctionUuid') auctionUuid: string, @JwtUser() user: User): Promise<void> {
     const command = AuctionSoldDtoMapper.toCommand(auctionUuid);
-    const response = await this.auctionSoldUseCase.execute(command, user);
+    await this.auctionSoldUseCase.execute(command, user);
   }
 }

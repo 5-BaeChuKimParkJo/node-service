@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-export class NotificationsNextCursorRequestDto {
+export class NotificationsRequestDto {
   @ApiProperty({ required: false, type: Number })
   notificationId?: number;
 }
