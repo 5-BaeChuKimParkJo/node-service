@@ -27,7 +27,7 @@ export class SseService implements OnModuleInit, OnModuleDestroy {
   };
 
   subscribe = async (memberUuid: string, req: FastifyRequest, reply: FastifyReply) => {
-    await this.connect(memberUuid, reply);
+    await this.connect(memberUuid, reply, req);
     req.raw.on('close', async () => {
       await this.disconnect(memberUuid, reply);
     });
@@ -69,12 +69,23 @@ export class SseService implements OnModuleInit, OnModuleDestroy {
     }
   };
 
-  private connect = async (memberUuid: string, reply: FastifyReply) => {
+  private connect = async (memberUuid: string, reply: FastifyReply, req: FastifyRequest) => {
+    const origin = req.headers.origin;
+    const allowedOrigins = [
+      'http://localhost:3000',
+      'https://cabbage-secondhand.shop',
+      'https://www.cabbage-secondhand.shop',
+    ];
+
+    if (!origin || !allowedOrigins.includes(origin)) {
+      reply.status(403).send('Forbidden');
+      return;
+    }
     reply.raw.writeHead(200, {
       'Content-Type': 'text/event-stream',
       Connection: 'keep-alive',
       'Cache-Control': 'no-cache',
-      'Access-Control-Allow-Origin': 'https://cabbage-secondhand.shop',
+      'Access-Control-Allow-Origin': origin,
       'Access-Control-Allow-Credentials': 'true',
     });
     reply.raw.write(':\n\n');
