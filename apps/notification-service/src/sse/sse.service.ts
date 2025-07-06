@@ -74,7 +74,7 @@ export class SseService implements OnModuleInit, OnModuleDestroy {
       'Content-Type': 'text/event-stream',
       Connection: 'keep-alive',
       'Cache-Control': 'no-cache',
-      'Access-Control-Allow-Origin': 'http://localhost:3000',
+      'Access-Control-Allow-Origin': 'https://cabbage-secondhand.shop',
       'Access-Control-Allow-Credentials': 'true',
     });
     reply.raw.write(':\n\n');
