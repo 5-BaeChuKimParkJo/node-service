@@ -33,6 +33,24 @@ export class ReadRepository {
     );
   };
 
+  findUsersAuctions = (memberUuid: string): TE.TaskEither<AppException, MongoCatalogTypeAuction[]> => {
+    return F.pipe(
+      TE.tryCatch(
+        () =>
+          this.db
+            .collection('catalog')
+            .find({ sellerUuid: memberUuid, type: 'auction' })
+            .sort({ createdAt: -1 })
+            .toArray(),
+        (error) =>
+          new AppException({ code: ErrorCode.DB_ERROR, message: String(error) }, HttpStatus.INTERNAL_SERVER_ERROR),
+      ),
+      TE.map(A.map(this.fn.parseAuction)),
+      TE.map(A.sequence(E.Applicative)),
+      TE.flatMap(TE.fromEither),
+    );
+  };
+
   findProducts = (productUuids: string[]): TE.TaskEither<AppException, MongoCatalogTypeProduct[]> => {
     return F.pipe(
       TE.tryCatch(

@@ -9,6 +9,7 @@ export const ErrorCode = {
   DB_ERROR: 1007,
   OTHER_SERVICE_ERROR: 1008,
   KAFKA_COMMIT_ERROR: 1009,
+  NOT_IMPLEMENTED: 1010,
 } satisfies Record<string, number>;
 
 export type ErrorCode = (typeof ErrorCode)[keyof typeof ErrorCode];
