@@ -3,10 +3,14 @@ import { AuctionRepositoryPort } from '../port/out/auction-repository.port';
 import AuctionBidderForCreateBulkDomain from '../../domain/model/auction-bidder-for-create-bulk.domain';
 import { CreateAuctionBidderKafkaCommand } from '../port/dto/create-auction-bidder-kafka.command';
 import { Injectable } from '@nestjs/common';
+import { KafkaService } from '@app/common/kafka/kafka.service';
 
 @Injectable()
 export class CreateAuctionBidderBatchService extends CreateAuctionBidderBatchUseCase {
-  constructor(private readonly auctionRepositoryPort: AuctionRepositoryPort) {
+  constructor(
+    private readonly auctionRepositoryPort: AuctionRepositoryPort,
+    private readonly kafkaService: KafkaService,
+  ) {
     super();
   }
 
@@ -38,6 +42,34 @@ export class CreateAuctionBidderBatchService extends CreateAuctionBidderBatchUse
           currentBidder.bidAmount,
           currentBidder.bidderUuid,
           tx,
+        );
+
+        const awardedBidderUuids = auctionBidderForCreateBatchDomain.getSnapshot().map(({ bidderUuid }) => bidderUuid);
+        const awardedBidderUuidsSet = new Set(awardedBidderUuids);
+        const bidderUuids = commands.map(({ bidderUuid }) => bidderUuid);
+        const rejectedBidderUuids = bidderUuids.filter((bidderUuid) => !awardedBidderUuidsSet.has(bidderUuid));
+
+        this.kafkaService.sendCommonMessage(
+          awardedBidderUuids.map((bidderUuid) => ({
+            key: bidderUuid,
+            value: {
+              data: {},
+              memberUuids: [bidderUuid],
+              message: 'auction-bidder-awarded',
+              type: 'auction-bidder-awarded',
+            },
+          })),
+        );
+        this.kafkaService.sendCommonMessage(
+          rejectedBidderUuids.map((bidderUuid) => ({
+            key: bidderUuid,
+            value: {
+              data: {},
+              memberUuids: [bidderUuid],
+              message: 'auction-bidder-rejected',
+              type: 'auction-bidder-rejected',
+            },
+          })),
         );
       }
     });

@@ -46,6 +46,9 @@ export class S3Service {
 
   checkFileExists = async ({ key }: CheckFileExistsArgs): Promise<void> => {
     try {
+      if (key.startsWith('http')) {
+        return;
+      }
       await this.s3.send(new HeadObjectCommand({ Bucket: this.bucket, Key: key }));
     } catch (e) {
       throw new AppException(
@@ -56,6 +59,9 @@ export class S3Service {
   };
 
   toFullUrl = (key: string): string => {
+    if (key.startsWith('http')) {
+      return key;
+    }
     const region = this.configService.getOrThrow('AWS_REGION', { infer: true });
     const bucket = this.bucket;
 

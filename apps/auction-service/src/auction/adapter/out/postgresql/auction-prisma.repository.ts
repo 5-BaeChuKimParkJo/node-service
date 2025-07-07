@@ -28,6 +28,7 @@ import { toNumber } from '@app/common/utils/number.utils';
 import { S3Service } from '@app/common/s3/s3.service';
 import AuctionBidderForCreateBulkDomain from '../../../domain/model/auction-bidder-for-create-bulk.domain';
 import AuctionViewedForCreateBulkDomain from '../../../domain/model/auction-viewed-for-create-bulk.domain';
+import { randomUUID } from 'crypto';
 
 @Injectable()
 export class AuctionPrismaRepository extends AuctionRepositoryPort {
@@ -298,10 +299,13 @@ export class AuctionPrismaRepository extends AuctionRepositoryPort {
     tx?: TX,
   ): Promise<void> => {
     const prisma = tx ?? this.prisma;
-    await prisma.auctions.update({
+    const res = await prisma.auctions.update({
+      include: { auctionImages: true },
       where: { auctionUuid },
       data: { currentBid, currentBidderUuid },
     });
+    const auctionDomain = new AuctionDomain(auctionPropsSchema.parse({ ...res, images: res.auctionImages }));
+    await this.createAuctionOutbox(auctionDomain, 'u', tx);
   };
 
   override deleteAuction = async (auctionForDelete: AuctionForDeleteDomain): Promise<void> => {
@@ -351,11 +355,18 @@ export class AuctionPrismaRepository extends AuctionRepositoryPort {
     tx?: TX,
   ): Promise<number> => {
     const prisma = tx ?? this.prisma;
-    const res = await prisma.auctions.updateMany({
-      where: { auctionUuid, currentBid: { lt: bidAmount } },
-      data: { currentBid: bidAmount, currentBidderUuid: bidderUuid },
-    });
-    return res.count;
+    try {
+      const res = await prisma.auctions.update({
+        include: { auctionImages: true },
+        where: { auctionUuid, currentBid: { lt: bidAmount } },
+        data: { currentBid: bidAmount, currentBidderUuid: bidderUuid },
+      });
+      const auctionDomain = new AuctionDomain(auctionPropsSchema.parse({ ...res, images: res.auctionImages }));
+      await this.createAuctionOutbox(auctionDomain, 'u', tx);
+      return 1;
+    } catch (e) {
+      return 0;
+    }
   };
 
   override findAuctionBidders = async ({

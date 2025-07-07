@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { EnvSchema } from '../common/env-schema';
 import { Consumer, ConsumerConfig, Kafka } from 'kafkajs';
 import { KafkaJS } from '@confluentinc/kafka-javascript';
+import { CommonMessageValue } from '@app/common/schema/common-message.schema';
 
 @Injectable()
 export class KafkaService implements OnModuleInit, OnModuleDestroy {
@@ -45,6 +46,21 @@ export class KafkaService implements OnModuleInit, OnModuleDestroy {
     } else {
       return await this.producerTx.send(producerRecord);
     }
+  };
+
+  sendCommonMessage = async (
+    message: {
+      key: string;
+      value: CommonMessageValue;
+    }[],
+  ): Promise<KafkaJS.RecordMetadata[]> => {
+    return await this.producerTx.send({
+      topic: 'notification-consumer-service.common-message',
+      messages: message.map(({ key, value }) => ({
+        key,
+        value: JSON.stringify(value),
+      })),
+    });
   };
 
   consumer = (consumerConfig: ConsumerConfig): Consumer => {

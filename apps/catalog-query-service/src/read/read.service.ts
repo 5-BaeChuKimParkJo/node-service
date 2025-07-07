@@ -123,4 +123,8 @@ export class ReadService {
   thumbnails = (ids: string[]): TE.TaskEither<AppException, Thumbnail[]> => {
     return this.readRepository.findThumbnails(ids);
   };
+
+  usersAuctions = (memberUuid: string): TE.TaskEither<AppException, Omit<Auction, 'seller'>[]> => {
+    return this.readRepository.findUsersAuctions(memberUuid);
+  };
 }

@@ -25,15 +25,15 @@ export class AuctionSoldService extends AuctionSoldUseCase {
         HttpStatus.NOT_FOUND,
       );
     }
-    // if (auction.soldAt) {
-    //   throw new AppException(
-    //     {
-    //       message: '이미 판매가 완료된 경매입니다.',
-    //       code: HttpStatus.BAD_REQUEST,
-    //     },
-    //     HttpStatus.BAD_REQUEST,
-    //   );
-    // }
+    if (auction.soldAt) {
+      throw new AppException(
+        {
+          message: '이미 판매가 완료된 경매입니다.',
+          code: HttpStatus.BAD_REQUEST,
+        },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
     await this.auctionRepositoryPort.updateAuction(auctionForUpdateDomain);
   };
 }
