@@ -41,6 +41,10 @@ export class AuctionEtcService {
           TE.map(Rec.map(NEA.head)),
         ),
       ),
+      TE.map((d) => {
+        console.log(d);
+        return d;
+      }),
       TE.map(({ bids, auctionByUuid, uuidById }) =>
         bids.map((bid) => ({
           bidder: bid,
