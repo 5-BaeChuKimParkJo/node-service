@@ -14,8 +14,6 @@ export class AuctionEtcFn {
   constructor(private readonly configService: ConfigService<EnvSchema>) {}
 
   fetchAuctions = (auctionUuids: string[]): TE.TaskEither<AppException, HttpAuction[]> => {
-    console.log(auctionUuids, `${this.configService.get('CATALOG_QUERY_SERVICE')}api/v1/auctions/bulk`);
-
     return F.pipe(
       TE.tryCatch(
         () => axios.post(`${this.configService.get('CATALOG_QUERY_SERVICE')}api/v1/auctions/bulk`, { auctionUuids }),
@@ -25,15 +23,7 @@ export class AuctionEtcFn {
             HttpStatus.INTERNAL_SERVER_ERROR,
           ),
       ),
-      TE.map((d) => {
-        console.log(2.1);
-        return d;
-      }),
       TE.map((res) => res.data),
-      TE.map((d) => {
-        console.log(2.2, d);
-        return d;
-      }),
       TE.flatMap((res) =>
         F.pipe(
           E.tryCatch(
