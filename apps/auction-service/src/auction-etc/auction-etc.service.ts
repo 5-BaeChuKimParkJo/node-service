@@ -24,7 +24,7 @@ export class AuctionEtcService {
     return F.pipe(
       TE.Do,
       TE.bind('bids', () => this.auctionEtcRepository.findMyBids(user)),
-      TE.bind('uuidById', ({ bids }) =>
+      TE.bind('auctionUuidByAutcionId', ({ bids }) =>
         F.pipe(
           bids,
           A.map((auction) => auction.auctionId),
@@ -34,23 +34,22 @@ export class AuctionEtcService {
           TE.map(Rec.map((auction) => auction.auctionUuid)),
         ),
       ),
-      TE.bind('auctionByUuid', ({ uuidById }) =>
+      TE.bind('auctionByAuctionUuid', ({ auctionUuidByAutcionId }) =>
         F.pipe(
-          uuidById,
+          auctionUuidByAutcionId,
           U.Rec.values,
           this.auctionEtcFn.fetchAuctions,
           TE.map(NEA.groupBy((auction) => auction.auctionUuid)),
-          TE.map(Rec.map(A.head)),
+          TE.map(Rec.map(NEA.head)),
         ),
       ),
-      TE.map(({ bids, auctionByUuid, uuidById }) =>
+      TE.map(({ bids, auctionByAuctionUuid, auctionUuidByAutcionId }) =>
         bids.map((bid) => ({
-          bidder: O.of(bid),
-          auction: auctionByUuid[uuidById[String(bid.auctionId)]],
+          bidder: bid,
+          auction: auctionByAuctionUuid[auctionUuidByAutcionId[String(bid.auctionId)]],
         })),
       ),
-      TE.map(A.map(Apply.sequenceS(O.Applicative))),
-      TE.map(A.filterMap((myBid) => myBid)),
+      TE.map(A.filter((myBid) => !!myBid.auction)),
     );
   };
 }
