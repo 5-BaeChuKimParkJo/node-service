@@ -18,12 +18,14 @@ type AuctionsItemResponse = {
   startAt: Date;
   endAt: Date;
   isDirectDeal: boolean;
+  currentBidderUuid: string | null;
   directDealLocation?: string | null;
   status: 'waiting' | 'active' | 'ended';
   productCondition: 'unopened' | 'new' | 'used';
   viewCount: bigint;
   thumbnailUrl: string;
   createdAt: Date;
+  soldAt?: Date | null;
   sellerUuid: string;
   tagIds: number[];
   images: AuctionsImageResponse[];

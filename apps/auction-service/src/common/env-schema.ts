@@ -1,6 +1,7 @@
 import { z } from 'zod';
 export const envSchema = z.object({
   DB_URL: z.string(),
+  CATALOG_QUERY_SERVICE: z.string(),
 });
 
 export type EnvSchema = z.infer<typeof envSchema>;

@@ -34,14 +34,13 @@ export class CreateAuctionBidderService extends CreateAuctionBidderUseCase {
           bidAmount: command.bidAmount,
           currentBidAmount: auctionSnapshot.currentBid,
           sellerUuid: auctionSnapshot.sellerUuid,
+          currentBid: auctionSnapshot.currentBid,
         },
         user,
       );
-      const currentBidderUuid = await this.auctionRepositoryPort.findAcutionCurrentBidderForUpdate(
-        command.auctionUuid,
-        tx,
-      );
-      if (currentBidderUuid === user.memberUuid) {
+      const auction = await this.auctionRepositoryPort.findAcutionForUpdate(command.auctionUuid, tx);
+      const snapshot = auction.getSnapshot();
+      if (snapshot.currentBidderUuid === user.memberUuid) {
         throw new AppException(
           { message: '이미 최고가를 입찰했습니다.', code: ErrorCode.VALIDATION_ERROR },
           HttpStatus.BAD_REQUEST,

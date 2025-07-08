@@ -3,29 +3,14 @@ services:
     build:
       context: .
       dockerfile: ./apps/auction-service/Dockerfile
-      target: production
-    command: node dist/apps/auction-service/main
+      target: development
+    command: npx pm2-runtime dist/apps/auction-service/main.js --name auction-service -i max
     ports:
       - '3001:3000'
-    env_file:
-      - ./apps/auction-service/.env
-    depends_on:
-      postgres-auction-service:
-        condition: service_healthy
-
-  postgres-auction-service:
-    image: postgres:17
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: postgres
-    ports:
-      - '6001:5432'
     volumes:
-      - ./volumes/postgres/auction-service:/var/lib/postgresql/data
-    healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U postgres']
-      interval: 5s
-      timeout: 5s
-      retries: 10
-      start_period: 5s
+      - ./apps/auction-service:/usr/src/app/apps/auction-service
+      - ./libs:/usr/src/app/libs
+      - /usr/src/app/apps/auction-service/src/prisma/generated
+    env_file:
+      - ./libs/common/.env
+      - ./apps/auction-service/.env

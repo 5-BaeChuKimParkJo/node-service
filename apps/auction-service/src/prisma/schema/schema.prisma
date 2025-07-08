@@ -44,6 +44,7 @@ model Auctions {
   productCondition   ProductCondition
   viewCount          BigInt           @default(0)
   thumbnailKey       String
+  soldAt             DateTime?        @db.Timestamptz(6)
 
   createdAt DateTime  @default(now()) @db.Timestamptz(6)
   updatedAt DateTime  @updatedAt @db.Timestamptz(6)
@@ -100,4 +101,13 @@ model Outbox {
   createdAt     DateTime @default(now()) @db.Timestamptz(6)
 
   @@index([aggregateType, aggregateId])
+}
+
+model AuctionViewed {
+  auctionViewedId BigInt @id @default(autoincrement())
+  auctionUuid     String @db.Uuid
+  viewerUuid      String @db.Uuid
+  viewedAt        DateTime @db.Timestamptz(6)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
 }
