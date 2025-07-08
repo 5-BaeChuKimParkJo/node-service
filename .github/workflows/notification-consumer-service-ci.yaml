@@ -31,7 +31,7 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v1
 
       - name: Install pnpm
-        run: npm install -g pnpm
+        run: npm install -g pnpm prisma
 
       - name: Install dependencies and build
         run: |
