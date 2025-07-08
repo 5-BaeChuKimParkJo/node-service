@@ -7,7 +7,9 @@ import * as TE from 'fp-ts/TaskEither';
 import * as F from 'fp-ts/function';
 import * as A from 'fp-ts/Array';
 import * as NEA from 'fp-ts/NonEmptyArray';
+import * as O from 'fp-ts/Option';
 import * as Rec from 'fp-ts/Record';
+import * as Apply from 'fp-ts/Apply';
 import { AuctionEtcFn } from './auction-etc.fn';
 import { MyBidsOutput } from './schema/my-bids.schema';
 
@@ -38,19 +40,17 @@ export class AuctionEtcService {
           U.Rec.values,
           this.auctionEtcFn.fetchAuctions,
           TE.map(NEA.groupBy((auction) => auction.auctionUuid)),
-          TE.map(Rec.map(NEA.head)),
+          TE.map(Rec.map(A.head)),
         ),
       ),
-      TE.map((d) => {
-        console.log(d);
-        return d;
-      }),
       TE.map(({ bids, auctionByUuid, uuidById }) =>
         bids.map((bid) => ({
-          bidder: bid,
+          bidder: O.of(bid),
           auction: auctionByUuid[uuidById[String(bid.auctionId)]],
         })),
       ),
+      TE.map(A.map(Apply.sequenceS(O.Applicative))),
+      TE.map(A.filterMap((myBid) => myBid)),
     );
   };
 }
