@@ -34,6 +34,7 @@ export class CreateAuctionBidderBatchService extends CreateAuctionBidderBatchUse
         auction,
       });
       const currentBidder = auctionBidderForCreateBatchDomain.getCurrent();
+      const awardedBidderUuids = auctionBidderForCreateBatchDomain.getSnapshot().map(({ bidderUuid }) => bidderUuid);
 
       if (currentBidder) {
         await this.auctionRepositoryPort.createAuctionBidders(auctionBidderForCreateBatchDomain, tx);
@@ -43,11 +44,6 @@ export class CreateAuctionBidderBatchService extends CreateAuctionBidderBatchUse
           currentBidder.bidderUuid,
           tx,
         );
-
-        const bidderUuids = commands.map(({ bidderUuid }) => bidderUuid);
-        const awardedBidderUuids = auctionBidderForCreateBatchDomain.getSnapshot().map(({ bidderUuid }) => bidderUuid);
-        const awardedBidderUuidsSet = new Set(bidderUuids);
-        const rejectedBidderUuids = bidderUuids.filter((bidderUuid) => !awardedBidderUuidsSet.has(bidderUuid));
 
         this.kafkaService.sendCommonMessage(
           awardedBidderUuids.map((bidderUuid) => ({
@@ -60,18 +56,22 @@ export class CreateAuctionBidderBatchService extends CreateAuctionBidderBatchUse
             },
           })),
         );
-        this.kafkaService.sendCommonMessage(
-          rejectedBidderUuids.map((bidderUuid) => ({
-            key: bidderUuid,
-            value: {
-              data: {},
-              memberUuids: [bidderUuid],
-              message: 'auction-bidder-rejected',
-              type: 'auction-bidder-rejected',
-            },
-          })),
-        );
       }
+
+      const bidderUuids = commands.map(({ bidderUuid }) => bidderUuid);
+      const awardedBidderUuidsSet = new Set(awardedBidderUuids);
+      const rejectedBidderUuids = bidderUuids.filter((bidderUuid) => !awardedBidderUuidsSet.has(bidderUuid));
+      this.kafkaService.sendCommonMessage(
+        rejectedBidderUuids.map((bidderUuid) => ({
+          key: bidderUuid,
+          value: {
+            data: {},
+            memberUuids: [bidderUuid],
+            message: 'auction-bidder-rejected',
+            type: 'auction-bidder-rejected',
+          },
+        })),
+      );
     });
   };
 }
