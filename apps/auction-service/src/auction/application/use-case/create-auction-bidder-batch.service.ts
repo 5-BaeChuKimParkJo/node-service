@@ -44,9 +44,9 @@ export class CreateAuctionBidderBatchService extends CreateAuctionBidderBatchUse
           tx,
         );
 
-        const awardedBidderUuids = auctionBidderForCreateBatchDomain.getSnapshot().map(({ bidderUuid }) => bidderUuid);
-        const awardedBidderUuidsSet = new Set(awardedBidderUuids);
         const bidderUuids = commands.map(({ bidderUuid }) => bidderUuid);
+        const awardedBidderUuids = auctionBidderForCreateBatchDomain.getSnapshot().map(({ bidderUuid }) => bidderUuid);
+        const awardedBidderUuidsSet = new Set(bidderUuids);
         const rejectedBidderUuids = bidderUuids.filter((bidderUuid) => !awardedBidderUuidsSet.has(bidderUuid));
 
         this.kafkaService.sendCommonMessage(
