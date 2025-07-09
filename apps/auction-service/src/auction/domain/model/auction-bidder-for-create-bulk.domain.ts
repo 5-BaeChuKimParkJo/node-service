@@ -22,6 +22,11 @@ export default class AuctionBidderForCreateBulkDomain {
   constructor({ bidders, auction }: AuctionBidderForCreateBulkArgs) {
     const nowAuction = auction.getSnapshot();
 
+    if (auction.isEnded()) {
+      this.props = [];
+      return;
+    }
+
     const byBidAmount = Ord.reverse(
       Ord.contramap((bidder: AuctionBidderForCreateBulkProps) => Number(bidder.bidAmount))(Num.Ord),
     );

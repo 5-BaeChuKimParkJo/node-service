@@ -16,7 +16,7 @@ export class AuctionEtcFn {
   fetchAuctions = (auctionUuids: string[]): TE.TaskEither<AppException, HttpAuction[]> => {
     return F.pipe(
       TE.tryCatch(
-        () => axios.post(`${this.configService.get('CATALOG_QUERY_SERVICE')}api/v1/auctions/bulk`, { auctionUuids }),
+        () => axios.post(`${this.configService.get('CATALOG_QUERY_SERVICE')}/api/v1/auctions/bulk`, { auctionUuids }),
         (error) =>
           new AppException(
             { code: ErrorCode.OTHER_SERVICE_ERROR, message: String(error) },

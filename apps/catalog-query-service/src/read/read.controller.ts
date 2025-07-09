@@ -39,7 +39,7 @@ export class ReadController {
 
   @Post('catalogs/thumbnails')
   @Version('1')
-  @ApiOkResponse({ type: [String] })
+  @ApiOkResponse({ type: [ThumbnailsResponseDto] })
   getThumbnails(@Body() dto: ThumbnailsRequestDto): TE.TaskEither<AppException, ThumbnailsResponseDto[]> {
     return this.readService.thumbnails(dto.ids);
   }
