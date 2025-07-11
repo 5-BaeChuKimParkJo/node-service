@@ -8,10 +8,15 @@ import { ErrorCode } from '@app/common';
 import * as TE from 'fp-ts/TaskEither';
 import * as F from 'fp-ts/function';
 import * as E from 'fp-ts/Either';
+import { KafkaService } from '@app/common/kafka/kafka.service';
+import { SendBidMessagesArgs } from './schema/send-bid-messages.schema';
 
 @Injectable()
 export class AuctionEtcFn {
-  constructor(private readonly configService: ConfigService<EnvSchema>) {}
+  constructor(
+    private readonly configService: ConfigService<EnvSchema>,
+    private readonly kafkaService: KafkaService,
+  ) {}
 
   fetchAuctions = (auctionUuids: string[]): TE.TaskEither<AppException, HttpAuction[]> => {
     return F.pipe(
@@ -37,6 +42,33 @@ export class AuctionEtcFn {
           TE.fromEither,
         ),
       ),
+    );
+  };
+
+  sendBidMessages = async (bidders: SendBidMessagesArgs[]) => {
+    const messageByType = {
+      'success-max': '입찰 성공',
+      success: '입찰 성공',
+      'rejected-period': '입찰 가능 기간이 아님',
+      'rejected-amount': '해당 가격으로 입찰 할 수 없습니다.',
+      'rejected-seller': '자신의 입찰',
+      'rejected-duplicate': '중복 입찰',
+      'rejected-too-high-bid': '너무 높은 가격입니다.',
+    };
+
+    await this.kafkaService.sendCommonMessage(
+      bidders.map((bidder) => ({
+        key: bidder.auctionUuid,
+        value: {
+          type: 'AUCTION_BID_RESULT',
+          message: messageByType[bidder.type],
+          memberUuids: [bidder.bidderUuid],
+          data: {
+            auctionUuid: bidder.auctionUuid,
+            requestId: bidder.requestId,
+          },
+        },
+      })),
     );
   };
 }

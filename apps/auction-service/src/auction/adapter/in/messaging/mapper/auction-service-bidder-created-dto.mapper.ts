@@ -8,6 +8,7 @@ export class AuctionServiceBidderCreatedDtoMapper {
       bidderUuid: dto.bidderUuid,
       bidAmount: dto.bidAmount,
       createdAt: new Date(dto.createdAt),
+      requestId: dto.requestId,
     };
   };
 }

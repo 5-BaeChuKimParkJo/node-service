@@ -1,4 +1,4 @@
-import { Controller, Get, Version } from '@nestjs/common';
+import { Controller, Get, Post, Version } from '@nestjs/common';
 import { AuctionEtcService } from './auction-etc.service';
 import { ApiBearerAuth, ApiOkResponse } from '@nestjs/swagger';
 import { MyBidsResponseDto } from './dto/my-bids.dto';

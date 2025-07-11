@@ -3,4 +3,5 @@ export type CreateAuctionBidderBatchCommand = {
   bidderUuid: string;
   bidAmount: number;
   createdAt: Date;
+  requestId: string;
 };

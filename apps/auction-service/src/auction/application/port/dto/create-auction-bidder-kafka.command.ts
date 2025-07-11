@@ -3,4 +3,5 @@ export type CreateAuctionBidderKafkaCommand = {
   bidderUuid: string;
   bidAmount: number;
   createdAt: Date;
+  requestId: string;
 };

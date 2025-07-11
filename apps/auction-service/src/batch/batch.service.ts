@@ -4,14 +4,12 @@ import { set } from 'date-fns';
 import * as F from 'fp-ts/function';
 import * as A from 'fp-ts/Array';
 import * as TE from 'fp-ts/TaskEither';
-import { KafkaService } from '@app/common/kafka/kafka.service';
 import { BatchFn } from './batch.fn';
 import { BatchRepository } from './batch.repository';
 
 @Injectable()
 export class BatchService {
   constructor(
-    private readonly kafkaService: KafkaService,
     private readonly batchFn: BatchFn,
     private readonly batchRepository: BatchRepository,
   ) {}

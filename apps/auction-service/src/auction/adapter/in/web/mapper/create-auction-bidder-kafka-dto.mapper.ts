@@ -13,6 +13,7 @@ export class CreateAuctionBidderKafkaDtoMapper {
       bidderUuid: user.memberUuid,
       bidAmount: dto.bidAmount,
       createdAt: new Date(),
+      requestId: dto.requestId,
     };
   };
 }

@@ -1,10 +1,10 @@
 import { KafkaService } from '@app/common/kafka/kafka.service';
 import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
-import { auctionServiceBidderCreatedSchema } from './schema/auction-bidder-created.schema';
 import { Batch, Consumer, KafkaMessage } from 'kafkajs';
-import { CreateAuctionBidderBatchUseCase } from '../../../application/port/in/create-auction-bidder-batch.use-case';
-import { AuctionServiceBidderCreatedDtoMapper } from './mapper/auction-service-bidder-created-dto.mapper';
 import { KafkaDlqTopicValue } from '@app/common/schema/kafka-dlq-topic.schema';
+import { auctionServiceBidderCreatedSchema } from '../auction/adapter/in/messaging/schema/auction-bidder-created.schema';
+import { AuctionServiceBidderCreatedDtoMapper } from '../auction/adapter/in/messaging/mapper/auction-service-bidder-created-dto.mapper';
+import { AuctionEtcService } from './auction-etc.service';
 
 @Injectable()
 export class AuctionServiceBidderCreatedConsumer implements OnModuleInit, OnModuleDestroy {
@@ -12,10 +12,10 @@ export class AuctionServiceBidderCreatedConsumer implements OnModuleInit, OnModu
 
   constructor(
     private readonly kafkaService: KafkaService,
-    private readonly createAuctionBidderBatchUseCase: CreateAuctionBidderBatchUseCase,
+    private readonly auctionEtcService: AuctionEtcService,
   ) {
     this.consumer = this.kafkaService.consumer({
-      groupId: 'auction-service',
+      groupId: 'auction-service.bidder.created',
     });
   }
 
@@ -63,7 +63,7 @@ export class AuctionServiceBidderCreatedConsumer implements OnModuleInit, OnModu
       eachBatch: async ({ batch, resolveOffset }) => {
         try {
           const parsed = this.parseMessages(batch.messages);
-          await this.createAuctionBidderBatchUseCase.execute(parsed);
+          await this.auctionEtcService.bidAuctionBatch(parsed);
           await this.commit(batch, resolveOffset);
         } catch (error) {
           await this.commit(batch, resolveOffset);
