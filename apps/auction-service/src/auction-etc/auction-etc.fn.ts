@@ -47,12 +47,11 @@ export class AuctionEtcFn {
 
   sendBidMessages = async (bidders: SendBidMessagesArgs[]) => {
     const messageByType = {
-      'success-max': '입찰 성공',
       success: '입찰 성공',
-      'rejected-period': '입찰 가능 기간이 아님',
+      'rejected-period': '입찰 가능 기간이 아닙니다.',
       'rejected-amount': '해당 가격으로 입찰 할 수 없습니다.',
-      'rejected-seller': '자신의 입찰',
-      'rejected-duplicate': '중복 입찰',
+      'rejected-seller': '자신의 상품에는 입찰할 수 없습니다.',
+      'rejected-duplicate': '이미 최고 입찰자입니다.',
       'rejected-too-high-bid': '너무 높은 가격입니다.',
     };
 

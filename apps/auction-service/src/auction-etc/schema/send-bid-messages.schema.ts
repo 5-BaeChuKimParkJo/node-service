@@ -6,7 +6,6 @@ export const SendBidMessagesArgsSchema = z.object({
   auctionUuid: z.string(),
   type: z.enum([
     'success',
-    'success-max',
     'rejected-period',
     'rejected-amount',
     'rejected-too-high-bid',

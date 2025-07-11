@@ -6,9 +6,10 @@ import { AuctionEtcRepository } from './auction-etc.repository';
 import { PrismaModule } from '../prisma/prisma.module';
 import { KafkaService } from '@app/common/kafka/kafka.service';
 import { AuctionServiceBidderCreatedConsumer } from './auction-service-bidder-created.consumer';
+import { S3Module } from '@app/common/s3/s3.module';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, S3Module],
   controllers: [AuctionEtcController],
   providers: [AuctionEtcService, AuctionEtcFn, AuctionEtcRepository, KafkaService, AuctionServiceBidderCreatedConsumer],
 })

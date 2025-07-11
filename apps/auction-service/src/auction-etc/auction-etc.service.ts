@@ -1,5 +1,5 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
-import { U, User } from '@app/common';
+import { toNumber, U, User } from '@app/common';
 import { AppException } from '@app/common/common/app.exception';
 import * as TE from 'fp-ts/TaskEither';
 import * as F from 'fp-ts/function';
@@ -57,6 +57,8 @@ export class AuctionEtcService {
   bidAuctionBatch = async (input: BidAuctionBatchInput[]) => {
     if (input.length === 0) return;
     type Bidder = {
+      auctionId: number;
+      bidAmount: number;
       bidderUuid: string;
       requestId: string;
       auctionUuid: string;
@@ -70,7 +72,7 @@ export class AuctionEtcService {
     };
     const now = new Date();
     const biddersWithStatus: Bidder[] = [];
-    const maxBidders: { auctionUuid: string; bidderUuid: string; bidAmount: number }[] = [];
+    const maxBidders: { auctionUuid: string; bidderUuid: string; bidAmount: number; auctionId: number }[] = [];
     await this.prisma.$transaction(async (tx) => {
       const auctionUuids = F.pipe(
         input,
@@ -84,12 +86,13 @@ export class AuctionEtcService {
       );
 
       for (const auction of auctions) {
+        const auctionId = toNumber(auction.auctionId);
         const bidders: BidAuctionBatchInput[] | undefined = biddersByAuctionUuid[auction.auctionUuid];
         if (!bidders) continue;
 
         // 입찰 가능한 기간이 아닌 경우
         if (!(auction.startAt <= now && now <= auction.endAt)) {
-          for (const bidder of bidders) biddersWithStatus.push({ ...bidder, type: 'rejected-period' });
+          for (const bidder of bidders) biddersWithStatus.push({ ...bidder, type: 'rejected-period', auctionId });
           continue;
         }
 
@@ -97,13 +100,14 @@ export class AuctionEtcService {
 
         // 자신의 경매에 입찰하는 경우
         const selfBidders = filteredBidders.filter((bidder) => bidder.bidderUuid === auction.sellerUuid);
-        for (const bidder of selfBidders) biddersWithStatus.push({ ...bidder, type: 'rejected-seller' });
+        for (const bidder of selfBidders) biddersWithStatus.push({ ...bidder, type: 'rejected-seller', auctionId });
         filteredBidders = filteredBidders.filter((bidder) => bidder.bidderUuid !== auction.sellerUuid);
 
         // 가격 미달인 경우
-        const minimumBid = Math.max(Number(auction.minimumBid) - 1, Number(auction.currentBid));
+        const minimumBid = Math.max(toNumber(auction.minimumBid) - 1, toNumber(auction.currentBid));
         const belowMinimumBidders = filteredBidders.filter((bidder) => bidder.bidAmount <= minimumBid);
-        for (const bidder of belowMinimumBidders) biddersWithStatus.push({ ...bidder, type: 'rejected-amount' });
+        for (const bidder of belowMinimumBidders)
+          biddersWithStatus.push({ ...bidder, type: 'rejected-amount', auctionId });
         filteredBidders = filteredBidders.filter((bidder) => bidder.bidAmount > minimumBid);
 
         if (filteredBidders.length === 0) continue;
@@ -117,9 +121,9 @@ export class AuctionEtcService {
           if (prevBidder === null) {
             simplifedBidders.push(bidder);
           } else if (prevBidder.bidAmount === bidder.bidAmount) {
-            biddersWithStatus.push({ ...bidder, type: 'rejected-amount' });
+            biddersWithStatus.push({ ...bidder, type: 'rejected-amount', auctionId });
           } else if (prevBidder.bidderUuid === bidder.bidderUuid) {
-            biddersWithStatus.push({ ...bidder, type: 'rejected-duplicate' });
+            biddersWithStatus.push({ ...bidder, type: 'rejected-duplicate', auctionId });
           } else {
             simplifedBidders.push(bidder);
           }
@@ -129,7 +133,7 @@ export class AuctionEtcService {
 
         if (filteredBidders.length === 0) continue;
         if (auction.currentBidderUuid !== null && filteredBidders[0].bidderUuid === auction.currentBidderUuid) {
-          biddersWithStatus.push({ ...filteredBidders[0], type: 'rejected-duplicate' });
+          biddersWithStatus.push({ ...filteredBidders[0], type: 'rejected-duplicate', auctionId });
           filteredBidders = filteredBidders.slice(1);
         }
 
@@ -142,9 +146,9 @@ export class AuctionEtcService {
           }
 
           if (stopFlag) {
-            biddersWithStatus.push({ ...bidder, type: 'rejected-too-high-bid' });
+            biddersWithStatus.push({ ...bidder, type: 'rejected-too-high-bid', auctionId });
           } else {
-            biddersWithStatus.push({ ...bidder, type: 'success' });
+            biddersWithStatus.push({ ...bidder, type: 'success', auctionId });
             maxBidder = bidder;
           }
 
@@ -152,7 +156,7 @@ export class AuctionEtcService {
         }
 
         if (maxBidder) {
-          maxBidders.push(maxBidder);
+          maxBidders.push({ ...maxBidder, auctionId });
         }
       }
 
@@ -172,6 +176,22 @@ export class AuctionEtcService {
         WHERE "auctionUuid" = v.id
       `);
       }
+
+      await tx.auctionBidders.createMany({
+        data: biddersWithStatus
+          .filter((bidder) => bidder.type === 'success')
+          .map((bidder) => ({
+            auctionId: bidder.auctionId,
+            bidAmount: BigInt(bidder.bidAmount),
+            bidderUuid: bidder.bidderUuid,
+          })),
+      });
+
+      await this.auctionEtcRepository.createAuctionOutbox(
+        maxBidders.map((bidder) => bidder.auctionId),
+        'u',
+        tx,
+      );
     });
 
     await this.auctionEtcFn.sendBidMessages(biddersWithStatus);
