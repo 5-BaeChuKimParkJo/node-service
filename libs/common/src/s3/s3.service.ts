@@ -48,9 +48,6 @@ export class S3Service {
 
   checkFileExists = async ({ key }: CheckFileExistsArgs): Promise<void> => {
     try {
-      if (key.startsWith('http')) {
-        return;
-      }
       await this.s3.send(new HeadObjectCommand({ Bucket: this.bucket, Key: key }));
     } catch (e) {
       throw new AppException(

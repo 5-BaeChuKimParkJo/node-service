@@ -8,6 +8,7 @@ import { CreateAuctionResponse } from '../port/dto/create-auction.response';
 import { User } from '@app/common';
 import { AuctionFileStoragePort } from '../port/out/auction-file-storage-port';
 import { TaxonomyService } from '../../../taxonomy/taxonomy.service';
+import { assertOwnedAuctionImageKey } from './auction-image-key';
 
 @Injectable()
 export class CreateAuctionService extends CreateAuctionUseCase {
@@ -23,6 +24,7 @@ export class CreateAuctionService extends CreateAuctionUseCase {
   override execute = async (command: CreateAuctionCommand, user: User): Promise<CreateAuctionResponse> => {
     await this.taxonomyService.validateSelection(command.categoryId, command.tagIds);
     const keys = command.images.map((image) => image.key);
+    keys.forEach((key) => assertOwnedAuctionImageKey(key, user.memberUuid));
     await Promise.all(keys.map((key) => this.auctionFileStoragePort.checkFileExists({ key })));
 
     const auctionForCreateDomain = new AuctionForCreateDomain(command, user);

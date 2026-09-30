@@ -4,6 +4,7 @@ import { JwtUser, User } from '@app/common';
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { UploadAuctionImageUseCase } from '../../../application/port/in/upload-auction-image.use-case';
 import { AuctionFileStoragePort } from '../../../application/port/out/auction-file-storage-port';
+import { isAuctionImageKey } from '../../../application/use-case/auction-image-key';
 
 @Controller('auction-images')
 export class AuctionMediaController {
@@ -29,7 +30,7 @@ export class AuctionMediaController {
   @Version('1')
   @Get(':key')
   async read(@Param('key') key: string, @Res() reply: FastifyReply) {
-    if (!/^[0-9a-f-]{36}\.(jpg|png|webp)$/.test(key)) {
+    if (!isAuctionImageKey(key)) {
       throw new BadRequestException('유효하지 않은 이미지 키입니다.');
     }
     const object = await this.storage.getObject(key);
