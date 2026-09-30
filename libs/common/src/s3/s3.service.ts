@@ -1,5 +1,5 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { HeadObjectCommand, S3Client } from '@aws-sdk/client-s3';
+import { GetObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
 import { createPresignedPost, PresignedPost } from '@aws-sdk/s3-presigned-post';
 import { ConfigService } from '@nestjs/config';
 import { EnvSchema } from '../common/env-schema';
@@ -18,6 +18,8 @@ export class S3Service {
         accessKeyId: this.configService.getOrThrow('AWS_ACCESS_KEY_ID', { infer: true }),
         secretAccessKey: this.configService.getOrThrow('AWS_SECRET_ACCESS_KEY', { infer: true }),
       },
+      endpoint: this.configService.get('S3_ENDPOINT', { infer: true }) || undefined,
+      forcePathStyle: this.configService.get('S3_FORCE_PATH_STYLE', { infer: true }) === 'true',
     });
     this.bucket = this.configService.getOrThrow('AWS_S3_BUCKET_NAME', { infer: true });
   }
@@ -58,9 +60,29 @@ export class S3Service {
     }
   };
 
+  putObject = async ({ key, contentType, body }: { key: string; contentType: string; body: Buffer }): Promise<void> => {
+    await this.s3.send(new PutObjectCommand({ Bucket: this.bucket, Key: key, ContentType: contentType, Body: body }));
+  };
+
+  getObject = async (key: string): Promise<{ contentType: string; body: Buffer }> => {
+    const result = await this.s3.send(new GetObjectCommand({ Bucket: this.bucket, Key: key }));
+    if (!result.Body) {
+      throw new AppException(
+        { code: ErrorCode.FILE_NOT_FOUND, message: '파일이 존재하지 않습니다' },
+        HttpStatus.NOT_FOUND,
+      );
+    }
+    const bytes = await result.Body.transformToByteArray();
+    return { contentType: result.ContentType ?? 'application/octet-stream', body: Buffer.from(bytes) };
+  };
+
   toFullUrl = (key: string): string => {
     if (key.startsWith('http')) {
       return key;
+    }
+    const publicBaseUrl = this.configService.get('S3_PUBLIC_BASE_URL', { infer: true });
+    if (publicBaseUrl) {
+      return `${publicBaseUrl.replace(/\/$/, '')}/${encodeURIComponent(key)}`;
     }
     const region = this.configService.getOrThrow('AWS_REGION', { infer: true });
     const bucket = this.bucket;

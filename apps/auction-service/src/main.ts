@@ -6,9 +6,12 @@ import { VersioningType } from '@nestjs/common';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import { TaskEitherInterceptor } from '@app/common/interceptor/task-either.interceptor';
+import multipart from '@fastify/multipart';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(AppModule, new FastifyAdapter());
+  // Nest's Fastify adapter and the plugin carry separate Fastify type copies.
+  await app.register(multipart as never);
   app.enableShutdownHooks();
   process.on('SIGINT', async () => void (await app.close()));
 

@@ -21,6 +21,14 @@ export class AuctionS3Storage extends AuctionFileStoragePort {
     await this.s3Service.checkFileExists(args);
   };
 
+  override putObject = async (args: { key: string; contentType: string; body: Buffer }): Promise<void> => {
+    await this.s3Service.putObject(args);
+  };
+
+  override getObject = async (key: string): Promise<{ contentType: string; body: Buffer }> => {
+    return this.s3Service.getObject(key);
+  };
+
   override toFullUrl = (key: string): string => {
     return this.s3Service.toFullUrl(key);
   };

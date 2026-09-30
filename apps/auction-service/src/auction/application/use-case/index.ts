@@ -25,8 +25,14 @@ import { AuctionSoldUseCase } from '../port/in/auction-sold.use-case';
 import { AuctionSoldService } from './auction-sold.service';
 import { AuctionViewedUseCase } from '../port/in/view-auction-batch.use-case';
 import { ViewAuctionBatchService } from './view-auction-batch.service';
+import { UploadAuctionImageUseCase } from '../port/in/upload-auction-image.use-case';
+import { UploadAuctionImageService } from './upload-auction-image.service';
 
 export const auctionUseCaseProviders: Provider[] = [
+  {
+    provide: UploadAuctionImageUseCase,
+    useClass: UploadAuctionImageService,
+  },
   {
     provide: AuctionUseCase,
     useClass: AuctionService,

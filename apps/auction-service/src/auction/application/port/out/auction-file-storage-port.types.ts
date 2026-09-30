@@ -11,3 +11,14 @@ export type PrisignedUrlReturn = {
 export type CheckFileExistsArgs = {
   key: string;
 };
+
+export type PutObjectArgs = {
+  key: string;
+  contentType: string;
+  body: Buffer;
+};
+
+export type GetObjectReturn = {
+  contentType: string;
+  body: Buffer;
+};
