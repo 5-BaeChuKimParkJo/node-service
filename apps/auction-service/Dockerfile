@@ -6,7 +6,7 @@ COPY package*.json ./
 COPY tsconfig.json tsconfig.json
 COPY nest-cli.json nest-cli.json
 
-RUN npm i -g prisma
+RUN npm i -g prisma@6.8.2
 
 RUN npm i
 
@@ -27,13 +27,13 @@ WORKDIR /usr/src/app
 
 COPY package*.json ./
 
-RUN npm install -g prisma
+RUN npm install -g prisma@6.8.2
 
 RUN npm install
-COPY apps/auction-service/src/prisma/schema/schema.prisma apps/auction-service/src/prisma/schema/schema.prisma
+COPY apps/auction-service/src/prisma/schema apps/auction-service/src/prisma/schema
 RUN npx prisma generate --schema=apps/auction-service/src/prisma/schema/schema.prisma
 RUN npm prune --prod
 
 COPY --from=development /usr/src/app/dist ./dist
 
-CMD ["node", "dist/apps/auction-service/main"]
+CMD ["sh", "-c", "prisma migrate deploy --schema=apps/auction-service/src/prisma/schema/schema.prisma && node dist/apps/auction-service/main"]
