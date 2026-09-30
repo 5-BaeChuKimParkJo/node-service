@@ -111,3 +111,15 @@ model AuctionViewed {
 
   createdAt DateTime @default(now()) @db.Timestamptz(6)
 }
+
+model Category {
+  categoryId Int     @id
+  name       String  @unique
+  description String
+  imageUrl   String?
+}
+
+model Tag {
+  tagId Int    @id
+  name  String @unique
+}

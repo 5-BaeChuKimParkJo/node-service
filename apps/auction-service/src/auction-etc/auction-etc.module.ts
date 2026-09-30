@@ -7,9 +7,10 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { KafkaService } from '@app/common/kafka/kafka.service';
 import { AuctionServiceBidderCreatedConsumer } from './auction-service-bidder-created.consumer';
 import { S3Module } from '@app/common/s3/s3.module';
+import { TaxonomyModule } from '../taxonomy/taxonomy.module';
 
 @Module({
-  imports: [PrismaModule, S3Module],
+  imports: [PrismaModule, S3Module, TaxonomyModule],
   controllers: [AuctionEtcController],
   providers: [AuctionEtcService, AuctionEtcFn, AuctionEtcRepository, KafkaService, AuctionServiceBidderCreatedConsumer],
 })

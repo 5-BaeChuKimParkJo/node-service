@@ -64,6 +64,9 @@ export class CreateAuctionResponseDto {
   @ApiProperty({ required: false, type: Number, nullable: true })
   categoryId?: number | null;
 
+  @ApiProperty({ required: false, type: String, nullable: true })
+  categoryName!: string | null;
+
   @ApiProperty({ type: String })
   title!: string;
 
@@ -105,6 +108,9 @@ export class CreateAuctionResponseDto {
 
   @ApiProperty({ type: [Number] })
   tagIds!: number[];
+
+  @ApiProperty({ type: [String] })
+  tagNames!: string[];
 
   @ApiProperty({ type: [CreateAuctionImageResponseDto] })
   images!: CreateAuctionImageResponseDto[];

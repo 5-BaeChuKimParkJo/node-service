@@ -11,6 +11,7 @@ export const kafkaAuctionServiceOutboxTopicValueSchema = z.object({
       .object({
         auctionUuid: z.string(),
         categoryId: z.number().nullable(),
+        categoryName: z.string().nullable(),
         title: z.string(),
         description: z.string(),
         minimumBid: z.number(),
@@ -34,6 +35,7 @@ export const kafkaAuctionServiceOutboxTopicValueSchema = z.object({
         sellerUuid: z.string(),
         currentBid: z.number(),
         tagIds: z.array(z.number()),
+        tagNames: z.array(z.string()),
         status: z.enum(['visible']),
         soldAt: z.preprocess(
           (arg) => (typeof arg === 'string' || typeof arg === 'number' ? new Date(arg) : arg),

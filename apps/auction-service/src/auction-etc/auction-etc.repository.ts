@@ -15,12 +15,14 @@ import * as F from 'fp-ts/function';
 import { TX } from '../auction/application/port/out/auction-repository.port';
 import { S3Service } from '@app/common/s3/s3.service';
 import { z } from 'zod';
+import { TaxonomyService } from '../taxonomy/taxonomy.service';
 
 @Injectable()
 export class AuctionEtcRepository {
   constructor(
     private readonly prisma: PrismaService,
     private readonly s3Service: S3Service,
+    private readonly taxonomyService: TaxonomyService,
   ) {}
 
   findMyBids = (user: User): TE.TaskEither<AppException, Prisma.AuctionBiddersGetPayload<{}>[]> => {
@@ -79,6 +81,7 @@ export class AuctionEtcRepository {
 
     for (const auction of auctions) {
       const { auctionId: _, ...auctionData } = auction;
+      const taxonomy = await this.taxonomyService.resolveNames(auctionData.categoryId, auctionData.tagIds);
       const auctionChangedValue: KafkaAuctionServiceOutboxTopicValue = {
         aggregateType: 'auction',
         aggregateId: auctionData.auctionUuid,
@@ -86,6 +89,7 @@ export class AuctionEtcRepository {
         op,
         payload: {
           ...auctionData,
+          ...taxonomy,
           status: 'visible',
           currentBid: toNumber(auctionData.currentBid),
           minimumBid: toNumber(auctionData.minimumBid),

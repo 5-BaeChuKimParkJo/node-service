@@ -15,6 +15,7 @@ export class AuctionDtoMapper {
     return {
       auctionUuid: response.auctionUuid,
       categoryId: response.categoryId,
+      categoryName: response.categoryName,
       title: response.title,
       description: response.description,
       minimumBid: toNumber(response.minimumBid),
@@ -29,6 +30,7 @@ export class AuctionDtoMapper {
       createdAt: response.createdAt.toISOString(),
       sellerUuid: response.sellerUuid,
       tagIds: response.tagIds,
+      tagNames: response.tagNames,
       soldAt: response.soldAt?.toISOString() ?? null,
       images: response.images.map(
         (image) =>

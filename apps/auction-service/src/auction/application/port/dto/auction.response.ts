@@ -7,6 +7,7 @@ type AuctionImageResponse = {
 export type AuctionResponse = {
   auctionUuid: string;
   categoryId?: number | null;
+  categoryName: string | null;
   title: string;
   description: string;
   minimumBid: bigint;
@@ -23,5 +24,6 @@ export type AuctionResponse = {
   soldAt?: Date | null;
   sellerUuid: string;
   tagIds: number[];
+  tagNames: string[];
   images: AuctionImageResponse[];
 };

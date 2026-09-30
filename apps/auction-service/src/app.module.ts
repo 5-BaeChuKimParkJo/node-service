@@ -8,6 +8,7 @@ import { HealthModule } from './health/health.module';
 import { BatchModule } from './batch/batch.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { AuctionEtcModule } from './auction-etc/auction-etc.module';
+import { TaxonomyModule } from './taxonomy/taxonomy.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { AuctionEtcModule } from './auction-etc/auction-etc.module';
     HealthModule,
     BatchModule,
     AuctionEtcModule,
+    TaxonomyModule,
   ],
 })
 export class AppModule {}

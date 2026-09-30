@@ -8,6 +8,7 @@ import { mapperProviders } from './application/mapper/inext';
 import { KafkaModule } from '@app/common/kafka/kafka.module';
 import { auctionMessageHandlerProviders } from './adapter/in/messaging';
 import { RedisModule } from '@app/common/redis/redis.module';
+import { TaxonomyModule } from '../taxonomy/taxonomy.module';
 
 @Module({
   providers: [
@@ -17,6 +18,6 @@ import { RedisModule } from '@app/common/redis/redis.module';
     ...auctionMessageHandlerProviders,
   ],
   controllers: [AuctionController],
-  imports: [PrismaModule, S3Module, KafkaModule, RedisModule],
+  imports: [PrismaModule, S3Module, KafkaModule, RedisModule, TaxonomyModule],
 })
 export class AuctionModule {}

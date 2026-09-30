@@ -29,12 +29,14 @@ import { S3Service } from '@app/common/s3/s3.service';
 import AuctionBidderForCreateBulkDomain from '../../../domain/model/auction-bidder-for-create-bulk.domain';
 import AuctionViewedForCreateBulkDomain from '../../../domain/model/auction-viewed-for-create-bulk.domain';
 import { randomUUID } from 'crypto';
+import { TaxonomyService } from '../../../../taxonomy/taxonomy.service';
 
 @Injectable()
 export class AuctionPrismaRepository extends AuctionRepositoryPort {
   constructor(
     private readonly prisma: PrismaService,
     private readonly s3Service: S3Service,
+    private readonly taxonomyService: TaxonomyService,
   ) {
     super();
     this.findAuction = this.findAuction.bind(this);
@@ -421,6 +423,7 @@ export class AuctionPrismaRepository extends AuctionRepositoryPort {
     const prisma = tx ?? this.prisma;
     const snapshot = auction.getSnapshot();
     const { auctionId: _, ...row } = snapshot;
+    const taxonomy = await this.taxonomyService.resolveNames(row.categoryId, row.tagIds);
     const auctionChangedValue: KafkaAuctionServiceOutboxTopicValue = {
       aggregateType: 'auction',
       aggregateId: snapshot.auctionUuid,
@@ -428,6 +431,7 @@ export class AuctionPrismaRepository extends AuctionRepositoryPort {
       op,
       payload: {
         ...row,
+        ...taxonomy,
         currentBid: toNumber(row.currentBid),
         minimumBid: toNumber(row.minimumBid),
         viewCount: toNumber(row.viewCount),
