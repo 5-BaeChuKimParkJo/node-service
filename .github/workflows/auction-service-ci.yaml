@@ -2,7 +2,7 @@ name: Build auction service image
 
 on:
   push:
-    branches: [auction/dev, "codex/**"]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
