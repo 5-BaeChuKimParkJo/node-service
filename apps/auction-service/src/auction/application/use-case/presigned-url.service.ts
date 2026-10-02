@@ -3,9 +3,9 @@ import { PresignedUrlUseCase } from '../port/in/presigned-url.use-case';
 import { AuctionFileStoragePort } from '../port/out/auction-file-storage-port';
 import { PresignedUrlCommand } from '../port/dto/presigned-url.command';
 import { PresignedUrlResponse } from '../port/dto/presigned-url.response';
-import { v4 as uuidv4 } from 'uuid';
 import mime from 'mime';
 import { ErrorCode, User, AppException } from '@app/common';
+import { createAuctionImageKey } from './auction-image-key';
 
 @Injectable()
 export class PresignedUrlService extends PresignedUrlUseCase {
@@ -18,7 +18,7 @@ export class PresignedUrlService extends PresignedUrlUseCase {
     if (!ext) {
       throw new AppException({ code: ErrorCode.INVALID_EXTENSION, message: '지원하지 않는 확장자 입니다' }, 400);
     }
-    const key = `auction/${user.memberUuid}/images/${uuidv4()}.${ext}`;
+    const key = createAuctionImageKey(user.memberUuid, ext);
 
     return await this.auctionFileStoragePort.presignedUrl({
       contentType: command.contentType,

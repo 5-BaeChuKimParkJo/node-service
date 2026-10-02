@@ -1,6 +1,11 @@
 import { BadRequestException } from '@nestjs/common';
+import { randomUUID } from 'crypto';
 
 const IMAGE_SUFFIX_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}\.(jpg|png|webp)$/i;
+
+export function createAuctionImageKey(memberUuid: string, extension: string): string {
+  return `${memberUuid}_${randomUUID()}.${extension}`;
+}
 
 export function assertOwnedAuctionImageKey(key: string, memberUuid: string): void {
   const prefix = `${memberUuid}_`;
