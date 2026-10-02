@@ -8,6 +8,8 @@ import { Mock } from 'vitest';
 import { BidAuctionBatchInput } from './schema/bidder.schema';
 import { shuffle } from '@app/common';
 import { SendBidMessagesArgs } from './schema/send-bid-messages.schema';
+import { TaxonomyService } from '../taxonomy/taxonomy.service';
+import { S3Service } from '@app/common/s3/s3.service';
 
 const dummyAuction: Prisma.AuctionsGetPayload<{}> = {
   auctionId: -1n,
@@ -62,6 +64,19 @@ describe('AuctionEtcService', () => {
           provide: AuctionEtcFn,
           useValue: {
             sendBidMessages: vitest.fn(),
+          },
+        },
+        {
+          provide: TaxonomyService,
+          useValue: {
+            listCategories: vitest.fn(),
+            listTags: vitest.fn(),
+          },
+        },
+        {
+          provide: S3Service,
+          useValue: {
+            toFullUrl: vitest.fn(),
           },
         },
       ],

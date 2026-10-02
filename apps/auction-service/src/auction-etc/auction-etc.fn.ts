@@ -1,6 +1,6 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { AppException } from '@app/common/common/app.exception';
-import { HttpAuction, HttpAuctionSchema } from '../common/schema/http-auction.schema';
+import { HttpAuction, HttpAuctionSchema, HttpMember, HttpMemberSchema } from '../common/schema/http-auction.schema';
 import axios from 'axios';
 import { ConfigService } from '@nestjs/config';
 import { EnvSchema } from '../common/env-schema';
@@ -40,6 +40,35 @@ export class AuctionEtcFn {
               ),
           ),
           TE.fromEither,
+        ),
+      ),
+    );
+  };
+
+  fetchMembers = (memberUuids: string[]): TE.TaskEither<AppException, HttpMember[]> => {
+    if (memberUuids.length === 0) return TE.right([]);
+    return F.pipe(
+      TE.tryCatch(
+        () =>
+          axios.post(`${this.configService.get('MEMBER_SERVICE')}/api/v1/member/list`, {
+            memberUuidList: memberUuids,
+          }),
+        (error) =>
+          new AppException(
+            { code: ErrorCode.OTHER_SERVICE_ERROR, message: String(error) },
+            HttpStatus.INTERNAL_SERVER_ERROR,
+          ),
+      ),
+      TE.flatMap((response) =>
+        TE.fromEither(
+          E.tryCatch(
+            () => HttpMemberSchema.array().parse(response.data),
+            (error) =>
+              new AppException(
+                { code: ErrorCode.VALIDATION_ERROR, message: String(error) },
+                HttpStatus.INTERNAL_SERVER_ERROR,
+              ),
+          ),
         ),
       ),
     );

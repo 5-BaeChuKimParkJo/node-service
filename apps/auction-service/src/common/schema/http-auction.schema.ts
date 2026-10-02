@@ -18,7 +18,7 @@ const TagSchema = z.object({
   name: z.string(),
 });
 
-const MemberSchema = z.object({
+export const HttpMemberSchema = z.object({
   memberUuid: z.string(),
   nickname: z.string(),
   gradeUuid: z.string(),
@@ -48,8 +48,9 @@ export const HttpAuctionSchema = z.object({
   status: z.enum(['waiting', 'active', 'ended']),
   category: CategorySchema.nullable(),
   tags: z.array(TagSchema),
-  seller: MemberSchema,
+  seller: HttpMemberSchema,
   images: z.array(AuctionImagesSchema),
 });
 
 export type HttpAuction = z.infer<typeof HttpAuctionSchema>;
+export type HttpMember = z.infer<typeof HttpMemberSchema>;

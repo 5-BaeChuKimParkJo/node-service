@@ -17,6 +17,10 @@ import { S3Service } from '@app/common/s3/s3.service';
 import { z } from 'zod';
 import { TaxonomyService } from '../taxonomy/taxonomy.service';
 
+export type MyBidDetail = Prisma.AuctionBiddersGetPayload<{
+  include: { auction: { include: { auctionImages: true } } };
+}>;
+
 @Injectable()
 export class AuctionEtcRepository {
   constructor(
@@ -35,6 +39,19 @@ export class AuctionEtcRepository {
           orderBy: {
             createdAt: 'desc',
           },
+          distinct: ['auctionId'],
+        }),
+      (e) => new AppException({ code: ErrorCode.DB_ERROR, message: String(e) }, HttpStatus.INTERNAL_SERVER_ERROR),
+    );
+  };
+
+  findMyBidDetails = (user: User): TE.TaskEither<AppException, MyBidDetail[]> => {
+    return TE.tryCatch(
+      () =>
+        this.prisma.auctionBidders.findMany({
+          where: { bidderUuid: user.memberUuid },
+          include: { auction: { include: { auctionImages: true } } },
+          orderBy: { createdAt: 'desc' },
           distinct: ['auctionId'],
         }),
       (e) => new AppException({ code: ErrorCode.DB_ERROR, message: String(e) }, HttpStatus.INTERNAL_SERVER_ERROR),

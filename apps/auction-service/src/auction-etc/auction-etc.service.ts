@@ -1,17 +1,18 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
-import { toNumber, U, User } from '@app/common';
+import { HttpStatus, Injectable } from '@nestjs/common';
+import { ErrorCode, toNumber, User } from '@app/common';
 import { AppException } from '@app/common/common/app.exception';
 import * as TE from 'fp-ts/TaskEither';
 import * as F from 'fp-ts/function';
 import * as A from 'fp-ts/Array';
 import * as NEA from 'fp-ts/NonEmptyArray';
-import * as Rec from 'fp-ts/Record';
 import * as Str from 'fp-ts/string';
 import { AuctionEtcFn } from './auction-etc.fn';
 import { MyBidsOutput } from './schema/my-bids.schema';
 import { PrismaService } from '../prisma/prisma.service';
 import { BidAuctionBatchInput } from './schema/bidder.schema';
 import { AuctionEtcRepository } from './auction-etc.repository';
+import { TaxonomyService } from '../taxonomy/taxonomy.service';
+import { S3Service } from '@app/common/s3/s3.service';
 
 @Injectable()
 export class AuctionEtcService {
@@ -19,38 +20,80 @@ export class AuctionEtcService {
     private readonly prisma: PrismaService,
     private readonly auctionEtcRepository: AuctionEtcRepository,
     private readonly auctionEtcFn: AuctionEtcFn,
+    private readonly taxonomyService: TaxonomyService,
+    private readonly s3Service: S3Service,
   ) {}
 
   getMyBids = (user: User): TE.TaskEither<AppException, MyBidsOutput[]> => {
     return F.pipe(
       TE.Do,
-      TE.bind('bids', () => this.auctionEtcRepository.findMyBids(user)),
-      TE.bind('auctionUuidByAutcionId', ({ bids }) =>
-        F.pipe(
-          bids,
-          A.map((auction) => auction.auctionId),
-          (auctionIds) => this.auctionEtcRepository.findAuctionUuids(auctionIds),
-          TE.map(NEA.groupBy((row) => String(row.auctionId))),
-          TE.map(Rec.map(NEA.head)),
-          TE.map(Rec.map((auction) => auction.auctionUuid)),
+      TE.bind('bidDetails', () => this.auctionEtcRepository.findMyBidDetails(user)),
+      TE.bind('members', ({ bidDetails }) =>
+        this.auctionEtcFn.fetchMembers([...new Set(bidDetails.map(({ auction }) => auction.sellerUuid))]),
+      ),
+      TE.bind('taxonomy', () =>
+        TE.tryCatch(
+          async () => ({
+            categories: await this.taxonomyService.listCategories(),
+            tags: await this.taxonomyService.listTags(),
+          }),
+          (error) =>
+            new AppException({ code: ErrorCode.DB_ERROR, message: String(error) }, HttpStatus.INTERNAL_SERVER_ERROR),
         ),
       ),
-      TE.bind('auctionByAuctionUuid', ({ auctionUuidByAutcionId }) =>
-        F.pipe(
-          auctionUuidByAutcionId,
-          U.Rec.values,
-          this.auctionEtcFn.fetchAuctions,
-          TE.map(NEA.groupBy((auction) => auction.auctionUuid)),
-          TE.map(Rec.map(NEA.head)),
-        ),
-      ),
-      TE.map(({ bids, auctionByAuctionUuid, auctionUuidByAutcionId }) =>
-        bids.map((bid) => ({
-          bidder: bid,
-          auction: auctionByAuctionUuid[auctionUuidByAutcionId[String(bid.auctionId)]],
-        })),
-      ),
-      TE.map(A.filter((myBid) => !!myBid.auction)),
+      TE.map(({ bidDetails, members, taxonomy }) => {
+        const memberByUuid = new Map(members.map((member) => [member.memberUuid, member]));
+        const categoryById = new Map(taxonomy.categories.map((category) => [category.categoryId, category]));
+        const tagById = new Map(taxonomy.tags.map((tag) => [tag.tagId, tag]));
+        const now = new Date();
+
+        return bidDetails.flatMap(({ auction, ...bidder }) => {
+          const seller = memberByUuid.get(auction.sellerUuid);
+          if (!seller || auction.status !== 'visible') return [];
+          const category = auction.categoryId == null ? null : (categoryById.get(auction.categoryId) ?? null);
+          const status = now < auction.startAt ? 'waiting' : now > auction.endAt ? 'ended' : 'active';
+
+          return [
+            {
+              bidder: {
+                bidderUuid: bidder.bidderUuid,
+                bidAmount: bidder.bidAmount,
+                createdAt: bidder.createdAt,
+              },
+              auction: {
+                type: 'auction',
+                auctionUuid: auction.auctionUuid,
+                title: auction.title,
+                description: auction.description,
+                minimumBid: toNumber(auction.minimumBid),
+                currentBid: toNumber(auction.currentBid),
+                startAt: auction.startAt.toISOString(),
+                endAt: auction.endAt.toISOString(),
+                isDirectDeal: auction.isDirectDeal,
+                directDealLocation: auction.directDealLocation,
+                productCondition: auction.productCondition,
+                viewCount: toNumber(auction.viewCount),
+                thumbnailUrl: this.s3Service.toFullUrl(auction.thumbnailKey),
+                createdAt: auction.createdAt.toISOString(),
+                soldAt: auction.soldAt?.toISOString() ?? null,
+                version: auction.version,
+                status,
+                category,
+                tags: auction.tagIds.flatMap((tagId) => {
+                  const tag = tagById.get(tagId);
+                  return tag ? [tag] : [];
+                }),
+                seller,
+                images: auction.auctionImages.map((image) => ({
+                  auctionImageId: toNumber(image.auctionImageId),
+                  url: this.s3Service.toFullUrl(image.key),
+                  order: image.order,
+                })),
+              },
+            } satisfies MyBidsOutput,
+          ];
+        });
+      }),
     );
   };
 
