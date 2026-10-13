@@ -27,8 +27,10 @@ import { AuctionViewedUseCase } from '../port/in/view-auction-batch.use-case';
 import { ViewAuctionBatchService } from './view-auction-batch.service';
 import { UploadAuctionImageUseCase } from '../port/in/upload-auction-image.use-case';
 import { UploadAuctionImageService } from './upload-auction-image.service';
+import { AuctionAdminService } from './auction-admin.service';
 
 export const auctionUseCaseProviders: Provider[] = [
+  AuctionAdminService,
   {
     provide: UploadAuctionImageUseCase,
     useClass: UploadAuctionImageService,

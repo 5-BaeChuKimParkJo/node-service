@@ -10,6 +10,8 @@ import { auctionMessageHandlerProviders } from './adapter/in/messaging';
 import { RedisModule } from '@app/common/redis/redis.module';
 import { TaxonomyModule } from '../taxonomy/taxonomy.module';
 import { AuctionMediaController } from './adapter/in/web/auction-media.controller';
+import { AuctionAdminController } from './adapter/in/web/auction-admin.controller';
+import { InternalAdminTokenGuard } from './adapter/in/web/internal-admin-token.guard';
 
 @Module({
   providers: [
@@ -17,8 +19,9 @@ import { AuctionMediaController } from './adapter/in/web/auction-media.controlle
     ...auctionPortProviders,
     ...mapperProviders,
     ...auctionMessageHandlerProviders,
+    InternalAdminTokenGuard,
   ],
-  controllers: [AuctionController, AuctionMediaController],
+  controllers: [AuctionController, AuctionMediaController, AuctionAdminController],
   imports: [PrismaModule, S3Module, KafkaModule, RedisModule, TaxonomyModule],
 })
 export class AuctionModule {}

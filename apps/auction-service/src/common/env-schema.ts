@@ -4,6 +4,7 @@ export const envSchema = z.object({
   CATALOG_QUERY_SERVICE: z.string(),
   MEMBER_SERVICE: z.string(),
   JWT_SECRET: z.string().min(32),
+  ADMIN_INTERNAL_TOKEN: z.string().min(24),
 });
 
 export type EnvSchema = z.infer<typeof envSchema>;

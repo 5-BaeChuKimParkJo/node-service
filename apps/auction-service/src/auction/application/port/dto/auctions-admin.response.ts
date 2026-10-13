@@ -14,7 +14,8 @@ type AuctionsItemResponse = {
   categoryId?: number | null;
   title: string;
   description: string;
-  minimumBid: bigint;
+  minimumBid: string;
+  currentBid: string;
   startAt: Date;
   endAt: Date;
   isDirectDeal: boolean;
