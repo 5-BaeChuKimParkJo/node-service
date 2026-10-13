@@ -8,6 +8,8 @@ import { mapperProviders } from './application/mapper/inext';
 import { KafkaModule } from '@app/common/kafka/kafka.module';
 import { auctionMessageHandlerProviders } from './adapter/in/messaging';
 import { RedisModule } from '@app/common/redis/redis.module';
+import { AuctionAdminController } from './adapter/in/web/auction-admin.controller';
+import { InternalAdminTokenGuard } from './adapter/in/web/internal-admin-token.guard';
 
 @Module({
   providers: [
@@ -15,8 +17,9 @@ import { RedisModule } from '@app/common/redis/redis.module';
     ...auctionPortProviders,
     ...mapperProviders,
     ...auctionMessageHandlerProviders,
+    InternalAdminTokenGuard,
   ],
-  controllers: [AuctionController],
+  controllers: [AuctionController, AuctionAdminController],
   imports: [PrismaModule, S3Module, KafkaModule, RedisModule],
 })
 export class AuctionModule {}

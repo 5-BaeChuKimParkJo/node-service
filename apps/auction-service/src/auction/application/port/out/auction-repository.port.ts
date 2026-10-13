@@ -14,7 +14,7 @@ import { AuctionsAdminCommand } from '../dto/auctions-admin.command';
 import { AuctionsByIdsAdminCommand } from '../dto/auctions-by-ids-admin.command';
 import { AuctionsByIdsCommand } from '../dto/auctions-by-ids.command';
 import { AuctionsCommand } from '../dto/auctions.command';
-import { AuctionBiddersReturn, AuctionsAdminReturn, AuctionsReturn } from './auction-repository.port.type';
+import { AdminAuctionActionArgs, AdminAuctionActionRecord, AuctionBiddersReturn, AuctionsAdminReturn, AuctionsReturn } from './auction-repository.port.type';
 import { Prisma } from 'apps/auction-service/src/prisma/generated';
 
 export type TX = Prisma.TransactionClient;
@@ -66,4 +66,7 @@ export abstract class AuctionRepositoryPort {
   abstract findAuctionBidders: (args: AuctionBiddersCommand) => Promise<AuctionBiddersReturn>;
 
   abstract createAuctionViewedBulk: (auctionViewed: AuctionViewedForCreateBulkDomain) => Promise<void>;
+
+  abstract applyAdminAction: (args: AdminAuctionActionArgs) => Promise<AuctionAdminDomain>;
+  abstract findAdminActions: (auctionUuid: string) => Promise<AdminAuctionActionRecord[]>;
 }

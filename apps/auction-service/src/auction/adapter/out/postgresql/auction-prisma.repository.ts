@@ -8,6 +8,7 @@ import AuctionForUpdateDomain from '../../../domain/model/auction-for-update.dom
 import AuctionForDeleteDomain from '../../../domain/model/auction-for-delete.domain';
 import {
   AuctionBiddersReturn,
+  AdminAuctionActionArgs,
   Auctions,
   AuctionsAdminReturn,
   AuctionsReturn,
@@ -29,6 +30,8 @@ import { S3Service } from '@app/common/s3/s3.service';
 import AuctionBidderForCreateBulkDomain from '../../../domain/model/auction-bidder-for-create-bulk.domain';
 import AuctionViewedForCreateBulkDomain from '../../../domain/model/auction-viewed-for-create-bulk.domain';
 import { randomUUID } from 'crypto';
+import { Prisma } from 'apps/auction-service/src/prisma/generated';
+import { z } from 'zod';
 
 @Injectable()
 export class AuctionPrismaRepository extends AuctionRepositoryPort {
@@ -178,22 +181,37 @@ export class AuctionPrismaRepository extends AuctionRepositoryPort {
 
   override findAuctions(args: AuctionsCommand): Promise<AuctionsReturn>;
   override findAuctions(args: AuctionsAdminCommand): Promise<AuctionsAdminReturn>;
-  override async findAuctions({
-    type,
-    cursor,
-  }: AuctionsCommand | AuctionsAdminCommand): Promise<AuctionsReturn | AuctionsAdminReturn> {
+  override async findAuctions(command: AuctionsCommand | AuctionsAdminCommand): Promise<AuctionsReturn | AuctionsAdminReturn> {
+    const { type, cursor } = command;
     const limit = 20;
     const pageSize = limit + 1;
+    const now = new Date();
+    const query = type === 'admin' ? command.query : undefined;
+    const status = type === 'admin' ? command.status : undefined;
+
+    const filters: Prisma.AuctionsWhereInput[] = [];
+    if (type === 'admin' && query) {
+      filters.push({
+        OR: [
+          { title: { contains: query, mode: Prisma.QueryMode.insensitive } },
+          ...(z.string().uuid().safeParse(query).success ? [{ auctionUuid: query }] : []),
+        ],
+      });
+    }
+    if (type === 'admin' && status) filters.push(this.adminStatusWhere(status, now));
+    if (cursor) {
+      filters.push({
+        OR: [
+          { createdAt: { lt: cursor.createdAt } },
+          { AND: [{ createdAt: cursor.createdAt }, { auctionUuid: { lt: cursor.auctionUuid } }] },
+        ],
+      });
+    }
 
     const rows = await this.prisma.auctions.findMany({
       where: {
         ...(type === 'user' && { status: { notIn: ['hidden', 'cancelled'] }, deletedAt: null }),
-        ...(cursor && {
-          OR: [
-            { createdAt: { lt: cursor.createdAt } },
-            { AND: [{ createdAt: cursor.createdAt }, { auctionUuid: { lt: cursor.auctionUuid } }] },
-          ],
-        }),
+        ...(filters.length > 0 && { AND: filters }),
       },
       include: {
         auctionImages: true,
@@ -450,5 +468,87 @@ export class AuctionPrismaRepository extends AuctionRepositoryPort {
     await prisma.auctionViewed.createMany({
       data: auctionViewed.getSnapshot(),
     });
+  };
+
+  override applyAdminAction = async ({
+    auctionUuid,
+    action,
+    actor,
+    reason,
+    now = new Date(),
+  }: AdminAuctionActionArgs): Promise<AuctionAdminDomain> => {
+    return this.prisma.$transaction(async (tx) => {
+      const current = await tx.auctions.findUnique({
+        where: { auctionUuid },
+        include: { auctionImages: true },
+      });
+      if (!current) {
+        throw new AppException(
+          { message: '해당 경매를 찾을 수 없습니다.', code: ErrorCode.NOT_FOUND },
+          HttpStatus.NOT_FOUND,
+        );
+      }
+
+      const currentDomain = new AuctionAdminDomain(
+        auctionAdminPropsSchema.parse({ ...current, images: current.auctionImages }),
+      );
+      const plan = currentDomain.planAction(action, now);
+      const updated = await tx.auctions.update({
+        where: { auctionUuid, version: current.version },
+        include: { auctionImages: true },
+        data: {
+          status: plan.persistedStatus,
+          endAt: plan.endAt,
+          version: { increment: 1 },
+        },
+      });
+      const updatedDomain = new AuctionAdminDomain(
+        auctionAdminPropsSchema.parse({ ...updated, images: updated.auctionImages }),
+      );
+
+      await tx.auctionAdminActions.create({
+        data: {
+          auctionUuid,
+          actor,
+          action,
+          reason,
+          previousStatus: plan.previousStatus,
+          nextStatus: plan.nextStatus,
+        },
+      });
+
+      const eventDomain = new AuctionDomain(
+        auctionPropsSchema.parse({ ...updated, status: 'visible', images: updated.auctionImages }),
+      );
+      await this.createAuctionOutbox(eventDomain, action === 'hide' ? 'd' : 'u', tx);
+      return updatedDomain;
+    });
+  };
+
+  override findAdminActions = async (auctionUuid: string) => {
+    return this.prisma.auctionAdminActions.findMany({
+      where: { auctionUuid },
+      select: {
+        auctionAdminActionId: true,
+        actor: true,
+        action: true,
+        reason: true,
+        previousStatus: true,
+        nextStatus: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 50,
+    });
+  };
+
+  private adminStatusWhere = (
+    status: NonNullable<AuctionsAdminCommand['status']>,
+    now: Date,
+  ): Prisma.AuctionsWhereInput => {
+    if (status === 'hidden' || status === 'cancelled') return { status };
+    if (status === 'waiting') return { status: 'visible', startAt: { gt: now } };
+    if (status === 'active') return { status: 'visible', startAt: { lte: now }, endAt: { gt: now } };
+    return { status: 'visible', endAt: { lte: now } };
   };
 }

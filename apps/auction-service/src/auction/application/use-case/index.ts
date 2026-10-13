@@ -25,8 +25,10 @@ import { AuctionSoldUseCase } from '../port/in/auction-sold.use-case';
 import { AuctionSoldService } from './auction-sold.service';
 import { AuctionViewedUseCase } from '../port/in/view-auction-batch.use-case';
 import { ViewAuctionBatchService } from './view-auction-batch.service';
+import { AuctionAdminService } from './auction-admin.service';
 
 export const auctionUseCaseProviders: Provider[] = [
+  AuctionAdminService,
   {
     provide: AuctionUseCase,
     useClass: AuctionService,

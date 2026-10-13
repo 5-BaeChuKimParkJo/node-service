@@ -111,3 +111,16 @@ model AuctionViewed {
 
   createdAt DateTime @default(now()) @db.Timestamptz(6)
 }
+
+model AuctionAdminActions {
+  auctionAdminActionId String   @id @default(uuid()) @db.Uuid
+  auctionUuid          String   @db.Uuid
+  actor                String
+  action               String
+  reason               String
+  previousStatus       String
+  nextStatus           String
+  createdAt            DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([auctionUuid, createdAt])
+}
