@@ -21,3 +21,11 @@ export class AuctionAdminActionRequestDto {
   @ApiProperty({ minLength: 1, maxLength: 500 })
   reason!: string;
 }
+
+export class AuctionAdminBidsRequestDto {
+  @ApiProperty({ required: false, format: 'date-time' })
+  createdAt?: string;
+
+  @ApiProperty({ required: false, format: 'uuid' })
+  auctionBidderUuid?: string;
+}

@@ -8,13 +8,14 @@ import AuctionForUpdateDomain from '../../../domain/model/auction-for-update.dom
 import AuctionViewedForCreateBulkDomain from '../../../domain/model/auction-viewed-for-create-bulk.domain';
 import AuctionDomain from '../../../domain/model/auction.domain';
 import { AuctionAdminCommand } from '../dto/auction-admin.command';
+import { AuctionAdminBidsCommand } from '../dto/auction-admin-bids.command';
 import { AuctionBiddersCommand } from '../dto/auction-bidders.command';
 import { AuctionCommand } from '../dto/auction.command';
 import { AuctionsAdminCommand } from '../dto/auctions-admin.command';
 import { AuctionsByIdsAdminCommand } from '../dto/auctions-by-ids-admin.command';
 import { AuctionsByIdsCommand } from '../dto/auctions-by-ids.command';
 import { AuctionsCommand } from '../dto/auctions.command';
-import { AdminAuctionActionArgs, AdminAuctionActionRecord, AuctionBiddersReturn, AuctionsAdminReturn, AuctionsReturn } from './auction-repository.port.type';
+import { AdminAuctionActionArgs, AdminAuctionActionRecord, AdminAuctionBidsReturn, AuctionBiddersReturn, AuctionsAdminReturn, AuctionsReturn } from './auction-repository.port.type';
 import { Prisma } from 'apps/auction-service/src/prisma/generated';
 
 export type TX = Prisma.TransactionClient;
@@ -69,4 +70,5 @@ export abstract class AuctionRepositoryPort {
 
   abstract applyAdminAction: (args: AdminAuctionActionArgs) => Promise<AuctionAdminDomain>;
   abstract findAdminActions: (auctionUuid: string) => Promise<AdminAuctionActionRecord[]>;
+  abstract findAdminBids: (args: AuctionAdminBidsCommand) => Promise<AdminAuctionBidsReturn>;
 }

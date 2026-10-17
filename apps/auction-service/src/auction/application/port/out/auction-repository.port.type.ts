@@ -3,6 +3,20 @@ import AuctionAdminDomain from '../../../domain/model/auction-admin.domain';
 import AuctionBidderDomain from '../../../domain/model/auction-bidder.domain';
 import AuctionDomain from '../../../domain/model/auction.domain';
 import { AuctionAdminAction } from '../../../domain/model/auction-admin.domain';
+import { AuctionAdminBidsCursor } from '../dto/auction-admin-bids.command';
+
+export type AdminAuctionBidRecord = {
+  auctionBidderUuid: string;
+  bidderUuid: string;
+  bidAmount: bigint;
+  createdAt: string;
+};
+
+export type AdminAuctionBidsReturn = {
+  items: AdminAuctionBidRecord[];
+  totalCount: number;
+  nextCursor: AuctionAdminBidsCursor | null;
+};
 
 export type AuctionsArgs = {
   createdAt: Date;

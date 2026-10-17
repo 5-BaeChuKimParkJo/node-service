@@ -6,6 +6,8 @@ import { AuctionsAdminCommand } from '../port/dto/auctions-admin.command';
 import { AuctionsAdminResponse } from '../port/dto/auctions-admin.response';
 import { AuctionAdminDetailResponse } from '../port/dto/auction-admin.response';
 import { AuctionAdminAction } from '../../domain/model/auction-admin.domain';
+import { AuctionAdminBidsCommand } from '../port/dto/auction-admin-bids.command';
+import { AuctionAdminBidsResponse } from '../port/dto/auction-admin-bids.response';
 
 export type AuctionAdminActionCommand = {
   auctionUuid: string;
@@ -26,14 +28,21 @@ export class AuctionAdminService {
     const result = await this.auctionRepositoryPort.findAuctions(command);
     return {
       items: result.items.map((item) => this.auctionAdminMapper.toResponse(item)),
-      nextCursor: result.nextCursor,
+      nextCursor: result.nextCursor
+        ? { ...result.nextCursor, createdAt: result.nextCursor.createdAt.toISOString() }
+        : null,
     };
   }
 
   async get(auctionUuid: string): Promise<AuctionAdminDetailResponse> {
     const result = await this.auctionRepositoryPort.findAuction({ type: 'admin', auctionUuid });
-    const auditLogs = await this.auctionRepositoryPort.findAdminActions(auctionUuid);
+    const auditLogs = await this.findAuditLogs(auctionUuid);
     return { ...this.auctionAdminMapper.toResponse(result), auditLogs };
+  }
+
+  async bids(command: AuctionAdminBidsCommand): Promise<AuctionAdminBidsResponse> {
+    const result = await this.auctionRepositoryPort.findAdminBids(command);
+    return this.auctionAdminMapper.toBidsResponse(result);
   }
 
   async action(command: AuctionAdminActionCommand): Promise<AuctionAdminDetailResponse> {
@@ -45,7 +54,12 @@ export class AuctionAdminService {
       );
     }
     const result = await this.auctionRepositoryPort.applyAdminAction({ ...command, reason });
-    const auditLogs = await this.auctionRepositoryPort.findAdminActions(command.auctionUuid);
+    const auditLogs = await this.findAuditLogs(command.auctionUuid);
     return { ...this.auctionAdminMapper.toResponse(result), auditLogs };
+  }
+
+  private async findAuditLogs(auctionUuid: string) {
+    const auditLogs = await this.auctionRepositoryPort.findAdminActions(auctionUuid);
+    return auditLogs.map((log) => ({ ...log, createdAt: log.createdAt.toISOString() }));
   }
 }

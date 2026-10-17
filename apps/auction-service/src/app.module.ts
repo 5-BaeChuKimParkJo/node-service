@@ -9,6 +9,7 @@ import { BatchModule } from './batch/batch.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { AuctionEtcModule } from './auction-etc/auction-etc.module';
 import { TaxonomyModule } from './taxonomy/taxonomy.module';
+import { PaymentModule } from './payment/payment.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { TaxonomyModule } from './taxonomy/taxonomy.module';
     BatchModule,
     AuctionEtcModule,
     TaxonomyModule,
+    PaymentModule,
   ],
 })
 export class AppModule {}

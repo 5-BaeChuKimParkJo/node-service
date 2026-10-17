@@ -1,7 +1,18 @@
 import { z } from 'zod';
-import { AuctionAdminListRequestDto, AuctionAdminActionRequestDto } from '../dto/auction-admin.dto';
+import { AuctionAdminListRequestDto, AuctionAdminActionRequestDto, AuctionAdminBidsRequestDto } from '../dto/auction-admin.dto';
 import { AuctionsAdminCommand } from '../../../../application/port/dto/auctions-admin.command';
 import { AuctionAdminActionCommand } from '../../../../application/use-case/auction-admin.service';
+import { AuctionAdminBidsCommand } from '../../../../application/port/dto/auction-admin-bids.command';
+
+const bidsSchema = z
+  .object({
+    auctionUuid: z.string().uuid(),
+    createdAt: z.string().datetime({ offset: true }).optional(),
+    auctionBidderUuid: z.string().uuid().optional(),
+  })
+  .refine((value) => (value.createdAt !== undefined) === (value.auctionBidderUuid !== undefined), {
+    message: 'createdAt and auctionBidderUuid must be provided together.',
+  });
 
 const listSchema = z
   .object({
@@ -22,6 +33,16 @@ const actionSchema = z.object({
 });
 
 export class AuctionAdminDtoMapper {
+  static toBidsCommand(auctionUuid: string, dto: AuctionAdminBidsRequestDto): AuctionAdminBidsCommand {
+    const parsed = bidsSchema.parse({ ...dto, auctionUuid });
+    return {
+      auctionUuid: parsed.auctionUuid,
+      cursor: parsed.createdAt && parsed.auctionBidderUuid
+        ? { createdAt: parsed.createdAt, auctionBidderUuid: parsed.auctionBidderUuid }
+        : undefined,
+    };
+  }
+
   static toListCommand(dto: AuctionAdminListRequestDto): AuctionsAdminCommand {
     const parsed = listSchema.parse(dto);
     return {

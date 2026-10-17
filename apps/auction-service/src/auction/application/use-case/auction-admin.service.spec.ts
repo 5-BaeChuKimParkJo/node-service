@@ -8,7 +8,7 @@ describe('AuctionAdminService', () => {
     const response = { auctionUuid: updated.auctionUuid, status: 'hidden' };
     const repository = {
       applyAdminAction: vi.fn().mockResolvedValue(updated),
-      findAdminActions: vi.fn().mockResolvedValue([{ action: 'hide' }]),
+      findAdminActions: vi.fn().mockResolvedValue([{ action: 'hide', createdAt: new Date('2026-10-13T02:34:56.000Z') }]),
     } as unknown as AuctionRepositoryPort;
     const mapper = {
       toResponse: vi.fn().mockReturnValue(response),
@@ -24,7 +24,7 @@ describe('AuctionAdminService', () => {
         reason: '  신고 검토 중  ',
         now,
       }),
-    ).resolves.toEqual({ ...response, auditLogs: [{ action: 'hide' }] });
+    ).resolves.toEqual({ ...response, auditLogs: [{ action: 'hide', createdAt: '2026-10-13T02:34:56.000Z' }] });
 
     expect(repository.applyAdminAction).toHaveBeenCalledWith({
       auctionUuid: updated.auctionUuid,

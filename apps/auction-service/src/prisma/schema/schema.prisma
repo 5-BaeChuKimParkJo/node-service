@@ -45,6 +45,7 @@ model Auctions {
   viewCount          BigInt           @default(0)
   thumbnailKey       String
   soldAt             DateTime?        @db.Timestamptz(6)
+  checkoutLockedAt   DateTime?        @db.Timestamptz(6)
 
   createdAt DateTime  @default(now()) @db.Timestamptz(6)
   updatedAt DateTime  @updatedAt @db.Timestamptz(6)
@@ -56,6 +57,65 @@ model Auctions {
 
   auctionBidders AuctionBidders[]
   auctionImages  AuctionImages[]
+  purchase       AuctionPurchase?
+}
+
+enum AuctionPurchaseStatus {
+  AWAITING_PAYMENT
+  PAID
+  CANCELED
+}
+
+enum AuctionPaymentAttemptStatus {
+  READY
+  CONFIRMING
+  UNKNOWN
+  WAITING_FOR_DEPOSIT
+  DONE
+  CANCELING
+  CANCELED
+  ABORTED
+  EXPIRED
+}
+
+model AuctionPurchase {
+  purchaseUuid String @id @default(uuid()) @db.Uuid
+  auctionUuid String @unique @db.Uuid
+  buyerUuid String @db.Uuid
+  sellerUuid String @db.Uuid
+  amount BigInt
+  orderName String
+  customerKey String @unique @db.Uuid
+  status AuctionPurchaseStatus @default(AWAITING_PAYMENT)
+  paidAt DateTime? @db.Timestamptz(6)
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+  auction Auctions @relation(fields: [auctionUuid], references: [auctionUuid])
+  attempts AuctionPaymentAttempt[]
+}
+
+model AuctionPaymentAttempt {
+  orderId String @id
+  purchaseUuid String @db.Uuid
+  attemptNumber Int
+  paymentKey String? @unique
+  confirmIdempotencyKey String @unique @db.Uuid
+  cancelIdempotencyKey String @unique @db.Uuid
+  status AuctionPaymentAttemptStatus @default(READY)
+  method String?
+  approvedAt DateTime? @db.Timestamptz(6)
+  confirmRequestedAt DateTime? @db.Timestamptz(6)
+  cancelRequestedAt DateTime? @db.Timestamptz(6)
+  operationLeaseUntil DateTime? @db.Timestamptz(6)
+  operationLeaseToken String? @db.Uuid
+  cancelReason String?
+  cancelActor String?
+  errorCode String?
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+  purchase AuctionPurchase @relation(fields: [purchaseUuid], references: [purchaseUuid])
+
+  @@unique([purchaseUuid, attemptNumber])
 }
 
 model AuctionImages {

@@ -34,4 +34,23 @@ it('serializes monetary bigint values as exact decimal strings', () => {
 
   expect(response.minimumBid).toBe('9007199254740993');
   expect(response.currentBid).toBe('9007199254740995');
+  expect(response).toMatchObject({
+    visibility: 'visible',
+    updatedAt: '2026-10-12T01:00:00.000Z',
+    deletedAt: null,
+    version: 0,
+  });
+
+  const deleted = new AuctionAdminDomain({
+    ...auction.getSnapshot(),
+    status: 'hidden',
+    deletedAt: new Date('2026-10-14T01:00:00.000Z'),
+    version: 7,
+  });
+  expect(mapper.toResponse(deleted)).toMatchObject({
+    status: 'hidden',
+    visibility: 'hidden',
+    deletedAt: '2026-10-14T01:00:00.000Z',
+    version: 7,
+  });
 });

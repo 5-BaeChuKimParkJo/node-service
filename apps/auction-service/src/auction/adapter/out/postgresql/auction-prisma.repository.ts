@@ -9,6 +9,8 @@ import AuctionForDeleteDomain from '../../../domain/model/auction-for-delete.dom
 import {
   AuctionBiddersReturn,
   AdminAuctionActionArgs,
+  AdminAuctionBidRecord,
+  AdminAuctionBidsReturn,
   Auctions,
   AuctionsAdminReturn,
   AuctionsReturn,
@@ -18,6 +20,7 @@ import AuctionBidderDomain from '../../../domain/model/auction-bidder.domain';
 import { ErrorCode, AppException, KafkaAuctionServiceOutboxTopicValue } from '@app/common';
 import { AuctionCommand } from '../../../application/port/dto/auction.command';
 import { AuctionAdminCommand } from '../../../application/port/dto/auction-admin.command';
+import { AuctionAdminBidsCommand } from '../../../application/port/dto/auction-admin-bids.command';
 import AuctionAdminDomain from '../../../domain/model/auction-admin.domain';
 import { auctionAdminPropsSchema } from '../../../domain/schema/auction-admin.schema';
 import { AuctionsCommand } from '../../../application/port/dto/auctions.command';
@@ -289,7 +292,7 @@ export class AuctionPrismaRepository extends AuctionRepositoryPort {
     const { images, auctionUuid, ...auction } = auctionForUpdate.getSnapshot();
     return await this.prisma.$transaction(async (tx) => {
       const { auctionImages, ...row } = await tx.auctions.update({
-        where: { auctionUuid },
+        where: { auctionUuid, checkoutLockedAt: null },
         include: {
           auctionImages: true,
         },
@@ -321,7 +324,7 @@ export class AuctionPrismaRepository extends AuctionRepositoryPort {
     const prisma = tx ?? this.prisma;
     const res = await prisma.auctions.update({
       include: { auctionImages: true },
-      where: { auctionUuid },
+      where: this.openBidWhere(auctionUuid, currentBid),
       data: { currentBid, currentBidderUuid },
     });
     const auctionDomain = new AuctionDomain(auctionPropsSchema.parse({ ...res, images: res.auctionImages }));
@@ -378,7 +381,7 @@ export class AuctionPrismaRepository extends AuctionRepositoryPort {
     try {
       const res = await prisma.auctions.update({
         include: { auctionImages: true },
-        where: { auctionUuid, currentBid: { lt: bidAmount } },
+        where: this.openBidWhere(auctionUuid, bidAmount),
         data: { currentBid: bidAmount, currentBidderUuid: bidderUuid },
       });
       const auctionDomain = new AuctionDomain(auctionPropsSchema.parse({ ...res, images: res.auctionImages }));
@@ -435,6 +438,43 @@ export class AuctionPrismaRepository extends AuctionRepositoryPort {
       items: items.map((row) => new AuctionBidderDomain({ ...row, auctionUuid })),
       nextCursor,
     };
+  };
+
+  override findAdminBids = async ({ auctionUuid, cursor }: AuctionAdminBidsCommand): Promise<AdminAuctionBidsReturn> => {
+    return this.prisma.$transaction(async (tx) => {
+      const auction = await tx.auctions.findUnique({
+        where: { auctionUuid },
+        select: { auctionId: true },
+      });
+      if (!auction) {
+        throw new AppException(
+          { message: '해당 경매를 찾을 수 없습니다.', code: ErrorCode.NOT_FOUND },
+          HttpStatus.NOT_FOUND,
+        );
+      }
+
+      const totalCount = await tx.auctionBidders.count({ where: { auctionId: auction.auctionId, deletedAt: null } });
+      // Prisma Date values truncate microseconds, so select the cursor timestamp as ISO text.
+      const rows = await tx.$queryRaw<AdminAuctionBidRecord[]>(Prisma.sql`
+        SELECT "auctionBidderUuid", "bidderUuid", "bidAmount",
+          to_char("createdAt" AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS "createdAt"
+        FROM "AuctionBidders"
+        WHERE "auctionId" = ${auction.auctionId} AND "deletedAt" IS NULL
+        ${cursor ? Prisma.sql`AND ("createdAt", "auctionBidderUuid") < (${cursor.createdAt}::timestamptz, ${cursor.auctionBidderUuid}::uuid)` : Prisma.empty}
+        ORDER BY "AuctionBidders"."createdAt" DESC, "auctionBidderUuid" DESC
+        LIMIT 21
+      `);
+      const hasNext = rows.length > 20;
+      const items = rows.slice(0, 20);
+      const lastItem = items[items.length - 1];
+      return {
+        items,
+        totalCount,
+        nextCursor: hasNext
+          ? { createdAt: lastItem.createdAt, auctionBidderUuid: lastItem.auctionBidderUuid }
+          : null,
+      };
+    }, { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead });
   };
 
   private createAuctionOutbox = async (auction: AuctionDomain, op: 'c' | 'u' | 'd', tx?: TX): Promise<void> => {
@@ -555,4 +595,18 @@ export class AuctionPrismaRepository extends AuctionRepositoryPort {
     if (status === 'active') return { status: 'visible', startAt: { lte: now }, endAt: { gt: now } };
     return { status: 'visible', endAt: { lte: now } };
   };
+
+  private openBidWhere(auctionUuid: string, bidAmount: bigint): Prisma.AuctionsWhereUniqueInput {
+    const now = new Date();
+    return {
+      auctionUuid,
+      currentBid: { lt: bidAmount },
+      status: 'visible',
+      deletedAt: null,
+      soldAt: null,
+      checkoutLockedAt: null,
+      startAt: { lte: now },
+      endAt: { gt: now },
+    };
+  }
 }
