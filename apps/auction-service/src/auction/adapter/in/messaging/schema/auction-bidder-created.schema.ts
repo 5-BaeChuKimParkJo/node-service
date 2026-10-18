@@ -8,4 +8,4 @@ export const auctionServiceBidderCreatedSchema = z.object({
   requestId: z.string(),
 });
 
-export type AuctionServiceBidderCreatedDto = z.infer<typeof auctionServiceBidderCreatedSchema>;
+export type AuctionBidCreatedEvent = z.infer<typeof auctionServiceBidderCreatedSchema>;

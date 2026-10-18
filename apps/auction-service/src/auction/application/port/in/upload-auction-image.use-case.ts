@@ -1,18 +1,15 @@
-import { User } from '@app/common';
+import { User } from '@app/common/types/user';
 
 export type UploadAuctionImageCommand = {
   contentType: string;
   bytes: Buffer;
 };
 
-export type UploadAuctionImageResponse = {
+export type UploadAuctionImageResult = {
   key: string;
   url: string;
 };
 
 export abstract class UploadAuctionImageUseCase {
-  abstract execute(
-    command: UploadAuctionImageCommand,
-    user: User,
-  ): Promise<UploadAuctionImageResponse>;
+  abstract execute(command: UploadAuctionImageCommand, user: User): Promise<UploadAuctionImageResult>;
 }

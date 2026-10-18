@@ -6,7 +6,9 @@ import * as TE from 'fp-ts/TaskEither';
 import * as A from 'fp-ts/Array';
 import * as E from 'fp-ts/Either';
 import { ReadFn } from './read.fn';
-import { ErrorCode, AppException, MongoProjection } from '@app/common';
+import { ErrorCode } from '@app/common/common/const';
+import { AppException } from '@app/common/common/app.exception';
+import { MongoProjection } from '@app/common/types/mongo';
 import { Thumbnail } from './schema/thumbnail-schema';
 
 @Injectable()

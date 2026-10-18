@@ -6,11 +6,8 @@ import { S3Service } from '@app/common/s3/s3.service';
 import { ZodExceptionFilter } from '@app/common/filter/zod-exception.filter';
 import { BigIntToNumberInterceptor } from '@app/common/middleware/bigint-to-number.middleware';
 import { execSync } from 'child_process';
-import {
-  CreateAuctionRequestDto,
-  CreateAuctionResponseDto,
-} from '../src/auction/adapter/in/web/dto/create-auction.dto';
-import { AuctionsResponseDto } from '../src/auction/adapter/in/web/dto/auctions.dto';
+import { CreateAuctionRequest, CreateAuctionResponse } from '../src/auction/adapter/in/web/dto/create-auction.dto';
+import { AuctionsResponse } from '../src/auction/adapter/in/web/dto/auctions.dto';
 import { KafkaService } from '@app/common/kafka/kafka.service';
 
 const userToken1 =
@@ -91,10 +88,10 @@ describe('옥션 완료처리 e2e', () => {
             order: 0,
           },
         ],
-      } satisfies CreateAuctionRequestDto);
+      } satisfies CreateAuctionRequest);
 
     expect(res.status).toBe(201);
-    const body = res.body as CreateAuctionResponseDto;
+    const body = res.body as CreateAuctionResponse;
     expect(body.auctionUuid).toBeDefined();
     expect(body.categoryId).toBe(1);
     expect(body.directDealLocation).toBe(`directDealLocation-1`);
@@ -108,7 +105,7 @@ describe('옥션 완료처리 e2e', () => {
   it('판매가자 아닌 사람이 경매 완료 요청시 404 에러 발생', async () => {
     const auctionsRes = await request(app.getHttpServer()).get('/api/v1/auctions');
     expect(auctionsRes.status).toBe(200);
-    const auctionsBody = auctionsRes.body as AuctionsResponseDto;
+    const auctionsBody = auctionsRes.body as AuctionsResponse;
     expect(auctionsBody.items.length).toBe(1);
     const auctionUuid = auctionsBody.items[0].auctionUuid;
 
@@ -122,7 +119,7 @@ describe('옥션 완료처리 e2e', () => {
   it('판매자의 경우 경매완료 요청시 200 응답', async () => {
     const auctionsRes = await request(app.getHttpServer()).get('/api/v1/auctions');
     expect(auctionsRes.status).toBe(200);
-    const auctionsBody = auctionsRes.body as AuctionsResponseDto;
+    const auctionsBody = auctionsRes.body as AuctionsResponse;
     expect(auctionsBody.items.length).toBe(1);
     const auctionUuid = auctionsBody.items[0].auctionUuid;
 
@@ -136,7 +133,7 @@ describe('옥션 완료처리 e2e', () => {
   it('완료상태로 변경되었는지 조회', async () => {
     const auctionsRes = await request(app.getHttpServer()).get('/api/v1/auctions');
     expect(auctionsRes.status).toBe(200);
-    const auctionsBody = auctionsRes.body as AuctionsResponseDto;
+    const auctionsBody = auctionsRes.body as AuctionsResponse;
     expect(auctionsBody.items.length).toBe(1);
     expect(auctionsBody.items[0].soldAt).not.toBeNull();
   });

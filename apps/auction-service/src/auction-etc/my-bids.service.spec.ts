@@ -1,6 +1,8 @@
 import * as E from 'fp-ts/Either';
 import { AuctionEtcService } from './auction-etc.service';
 
+vi.mock('@app/common/kafka/kafka.service', () => ({ KafkaService: class KafkaService {} }));
+
 describe('AuctionEtcService getMyBids', () => {
   it('assembles bid history from the auction database and member service', async () => {
     const createdAt = new Date('2026-10-02T12:00:00.000Z');

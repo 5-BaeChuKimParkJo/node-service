@@ -1,21 +1,19 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import {
-  ErrorCode,
-  isTimeTruncated,
-  KafkaAuctionServiceOutboxTopicValue,
-  kafkaAuctionServiceOutboxTopicValueSchema,
-  toNumber,
-  User,
-} from '@app/common';
+import { ErrorCode } from '@app/common/common/const';
+import { isTimeTruncated } from '@app/common/utils/date.utils';
+import { KafkaAuctionServiceOutboxTopicValue } from '@app/common/schema/kafka-auction-service-outbox-topic.schema';
+import { kafkaAuctionServiceOutboxTopicValueSchema } from '@app/common/schema/kafka-auction-service-outbox-topic.schema';
+import { toNumber } from '@app/common/utils/number.utils';
+import { User } from '@app/common/types/user';
 import * as TE from 'fp-ts/TaskEither';
 import { AppException } from '@app/common/common/app.exception';
 import { Auctions, Prisma } from '../prisma/generated';
 import * as F from 'fp-ts/function';
-import { TX } from '../auction/application/port/out/auction-repository.port';
+
 import { S3Service } from '@app/common/s3/s3.service';
 import { z } from 'zod';
-import { TaxonomyService } from '../taxonomy/taxonomy.service';
+import { TaxonomyUseCase } from '../taxonomy/application/port/in/taxonomy.use-case';
 
 export type MyBidDetail = Prisma.AuctionBiddersGetPayload<{
   include: { auction: { include: { auctionImages: true } } };
@@ -26,7 +24,7 @@ export class AuctionEtcRepository {
   constructor(
     private readonly prisma: PrismaService,
     private readonly s3Service: S3Service,
-    private readonly taxonomyService: TaxonomyService,
+    private readonly taxonomyService: TaxonomyUseCase,
   ) {}
 
   findMyBids = (user: User): TE.TaskEither<AppException, Prisma.AuctionBiddersGetPayload<{}>[]> => {
@@ -73,7 +71,10 @@ export class AuctionEtcRepository {
     );
   };
 
-  findAcutionsForUpdate = async (auctionUuids: string[], tx?: TX): Promise<Prisma.AuctionsGetPayload<{}>[]> => {
+  findAcutionsForUpdate = async (
+    auctionUuids: string[],
+    tx?: Prisma.TransactionClient,
+  ): Promise<Prisma.AuctionsGetPayload<{}>[]> => {
     const prisma = tx ?? this.prisma;
     return prisma.$queryRaw<Auctions[]>`
         SELECT *
@@ -84,7 +85,11 @@ export class AuctionEtcRepository {
       `;
   };
 
-  createAuctionOutbox = async (auctionids: number[], op: 'c' | 'u' | 'd', tx?: TX): Promise<void> => {
+  createAuctionOutbox = async (
+    auctionids: number[],
+    op: 'c' | 'u' | 'd',
+    tx?: Prisma.TransactionClient,
+  ): Promise<void> => {
     const prisma = tx ?? this.prisma;
 
     const auctions = await prisma.auctions.findMany({

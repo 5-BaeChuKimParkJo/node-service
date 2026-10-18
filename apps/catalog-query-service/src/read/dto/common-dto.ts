@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { HttpMember } from '../schema/http-member.schema';
 
-export class CategoryResponseDto {
+export class CategoryResponse {
   @ApiProperty({ type: Number })
   categoryId!: number;
 
@@ -15,7 +15,7 @@ export class CategoryResponseDto {
   imageUrl?: string | null;
 }
 
-export class TagResponseDto {
+export class TagResponse {
   @ApiProperty({ type: Number })
   tagId!: number;
 
@@ -23,7 +23,7 @@ export class TagResponseDto {
   name!: string;
 }
 
-export class MemberResponseDto implements HttpMember {
+export class MemberResponse implements HttpMember {
   @ApiProperty({ type: String })
   memberUuid!: string;
 

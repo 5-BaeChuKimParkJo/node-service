@@ -1,4 +1,4 @@
-import { isTimeTruncated } from '@app/common';
+import { isTimeTruncated } from '@app/common/utils/date.utils';
 import { z } from 'zod';
 
 export const auctionAdminPropsSchema = z

@@ -1,8 +1,8 @@
-import AuctionBidderDomain from '../../domain/model/auction-bidder.domain';
-import { AuctionBiddersResponse } from '../port/dto/auction-bidders.response';
+import AuctionBid from '../../domain/model/auction-bid';
+import { AuctionBiddersResult } from '../model/auction-bidders.result';
 
 export class AuctionBidderMapper {
-  toResponse = (auctionBidder: AuctionBidderDomain): AuctionBiddersResponse['items'][number] => {
+  toResponse = (auctionBidder: AuctionBid): AuctionBiddersResult['items'][number] => {
     const snapshot = auctionBidder.getSnapshot();
 
     return {

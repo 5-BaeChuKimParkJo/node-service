@@ -1,15 +1,15 @@
-import AuctionAdminDomain from '../../domain/model/auction-admin.domain';
+import AdminAuction from '../../domain/model/admin-auction';
 import { Injectable } from '@nestjs/common';
 import { AuctionFileStoragePort } from '../port/out/auction-file-storage-port';
-import { AuctionAdminResponse } from '../port/dto/auction-admin.response';
-import { AuctionAdminBidsResponse } from '../port/dto/auction-admin-bids.response';
+import { AuctionAdminResult } from '../model/auction-admin.result';
+import { AuctionAdminBidsResult } from '../model/auction-admin-bids.result';
 import { AdminAuctionBidsReturn } from '../port/out/auction-repository.port.type';
 
 @Injectable()
 export class AuctionAdminMapper {
   constructor(private readonly auctionFileStoragePort: AuctionFileStoragePort) {}
 
-  toResponse = (auctionAdmin: AuctionAdminDomain): AuctionAdminResponse => {
+  toResponse = (auctionAdmin: AdminAuction): AuctionAdminResult => {
     const snapshot = auctionAdmin.getSnapshot();
 
     return {
@@ -44,7 +44,7 @@ export class AuctionAdminMapper {
     };
   };
 
-  toBidsResponse = (result: AdminAuctionBidsReturn): AuctionAdminBidsResponse => ({
+  toBidsResponse = (result: AdminAuctionBidsReturn): AuctionAdminBidsResult => ({
     items: result.items.map((bid) => ({
       auctionBidderUuid: bid.auctionBidderUuid,
       bidderUuid: bid.bidderUuid,

@@ -3,7 +3,7 @@ export type PresignedUrlArgs = {
   key: string;
 };
 
-export type PrisignedUrlReturn = {
+export type PresignedUrlResult = {
   url: string;
   fields: Record<string, string>;
 };

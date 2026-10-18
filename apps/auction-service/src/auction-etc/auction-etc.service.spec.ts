@@ -6,10 +6,12 @@ import { Prisma } from '../prisma/generated';
 import { AuctionEtcService } from './auction-etc.service';
 import { Mock } from 'vitest';
 import { BidAuctionBatchInput } from './schema/bidder.schema';
-import { shuffle } from '@app/common';
+import { shuffle } from '@app/common/utils/array.util';
 import { SendBidMessagesArgs } from './schema/send-bid-messages.schema';
-import { TaxonomyService } from '../taxonomy/taxonomy.service';
+import { TaxonomyUseCase } from '../taxonomy/application/port/in/taxonomy.use-case';
 import { S3Service } from '@app/common/s3/s3.service';
+
+vi.mock('@app/common/kafka/kafka.service', () => ({ KafkaService: class KafkaService {} }));
 
 const dummyAuction: Prisma.AuctionsGetPayload<{}> = {
   auctionId: -1n,
@@ -52,12 +54,9 @@ describe('AuctionEtcService', () => {
         },
         {
           provide: AuctionEtcRepository,
-          useValue: {},
-        },
-        {
-          provide: AuctionEtcRepository,
           useValue: {
             findAcutionsForUpdate: vitest.fn(),
+            createAuctionOutbox: vitest.fn(),
           },
         },
         {
@@ -67,7 +66,7 @@ describe('AuctionEtcService', () => {
           },
         },
         {
-          provide: TaxonomyService,
+          provide: TaxonomyUseCase,
           useValue: {
             listCategories: vitest.fn(),
             listTags: vitest.fn(),
@@ -112,7 +111,7 @@ describe('AuctionEtcService', () => {
           ] satisfies Prisma.AuctionsGetPayload<{}>[],
       );
 
-      const tx = { $executeRawUnsafe: vitest.fn() };
+      const tx = { $executeRawUnsafe: vitest.fn(), auctionBidders: { createMany: vitest.fn() } };
       (prisma.$transaction as Mock).mockImplementation(async (fn) => await fn(tx));
 
       await auctionEtcService.bidAuctionBatch([
@@ -132,6 +131,7 @@ describe('AuctionEtcService', () => {
           bidderUuid: '20000000-0000-0000-0000-000000000000',
           createdAt: new Date('2027-01-01T12:00:00.000Z'),
           requestId: '20000000-0000-0000-0000-000000000000',
+          auctionId: 1,
           type: 'success',
         },
       ]);
@@ -178,7 +178,7 @@ describe('AuctionEtcService', () => {
           ] satisfies Prisma.AuctionsGetPayload<{}>[],
       );
 
-      const tx = { $executeRawUnsafe: vitest.fn() };
+      const tx = { $executeRawUnsafe: vitest.fn(), auctionBidders: { createMany: vitest.fn() } };
       (prisma.$transaction as Mock).mockImplementation(async (fn) => await fn(tx));
 
       await auctionEtcService.bidAuctionBatch([
@@ -198,6 +198,7 @@ describe('AuctionEtcService', () => {
           bidderUuid: '20000000-0000-0000-0000-000000000000',
           createdAt: new Date('2027-01-01T12:00:00.000Z'),
           requestId: '20000000-0000-0000-0000-000000000000',
+          auctionId: 1,
           type: 'rejected-period',
         },
       ]);
@@ -234,7 +235,7 @@ describe('AuctionEtcService', () => {
           ] satisfies Prisma.AuctionsGetPayload<{}>[],
       );
 
-      const tx = { $executeRawUnsafe: vitest.fn() };
+      const tx = { $executeRawUnsafe: vitest.fn(), auctionBidders: { createMany: vitest.fn() } };
       (prisma.$transaction as Mock).mockImplementation(async (fn) => await fn(tx));
 
       await auctionEtcService.bidAuctionBatch([
@@ -254,6 +255,7 @@ describe('AuctionEtcService', () => {
           bidderUuid: '20000000-0000-0000-0000-000000000000',
           createdAt: new Date('2027-01-01T12:00:00.000Z'),
           requestId: '20000000-0000-0000-0000-000000000000',
+          auctionId: 1,
           type: 'rejected-period',
         },
       ]);
@@ -290,7 +292,7 @@ describe('AuctionEtcService', () => {
           ] satisfies Prisma.AuctionsGetPayload<{}>[],
       );
 
-      const tx = { $executeRawUnsafe: vitest.fn() };
+      const tx = { $executeRawUnsafe: vitest.fn(), auctionBidders: { createMany: vitest.fn() } };
       (prisma.$transaction as Mock).mockImplementation(async (fn) => await fn(tx));
 
       await auctionEtcService.bidAuctionBatch([
@@ -310,6 +312,7 @@ describe('AuctionEtcService', () => {
           bidderUuid: '20000000-0000-0000-0000-000000000000',
           createdAt: new Date('2027-01-01T12:00:00.000Z'),
           requestId: '20000000-0000-0000-0000-000000000000',
+          auctionId: 1,
           type: 'rejected-seller',
         },
       ]);
@@ -346,7 +349,7 @@ describe('AuctionEtcService', () => {
           ] satisfies Prisma.AuctionsGetPayload<{}>[],
       );
 
-      const tx = { $executeRawUnsafe: vitest.fn() };
+      const tx = { $executeRawUnsafe: vitest.fn(), auctionBidders: { createMany: vitest.fn() } };
       (prisma.$transaction as Mock).mockImplementation(async (fn) => await fn(tx));
 
       await auctionEtcService.bidAuctionBatch([
@@ -366,6 +369,7 @@ describe('AuctionEtcService', () => {
           bidderUuid: '20000000-0000-0000-0000-000000000000',
           createdAt: new Date('2027-01-01T12:00:00.000Z'),
           requestId: '20000000-0000-0000-0000-000000000000',
+          auctionId: 1,
           type: 'rejected-amount',
         },
       ]);
@@ -402,7 +406,7 @@ describe('AuctionEtcService', () => {
           ] satisfies Prisma.AuctionsGetPayload<{}>[],
       );
 
-      const tx = { $executeRawUnsafe: vitest.fn() };
+      const tx = { $executeRawUnsafe: vitest.fn(), auctionBidders: { createMany: vitest.fn() } };
       (prisma.$transaction as Mock).mockImplementation(async (fn) => await fn(tx));
 
       await auctionEtcService.bidAuctionBatch([
@@ -422,6 +426,7 @@ describe('AuctionEtcService', () => {
           bidderUuid: '20000000-0000-0000-0000-000000000000',
           createdAt: new Date('2027-01-01T12:00:00.000Z'),
           requestId: '20000000-0000-0000-0000-000000000000',
+          auctionId: 1,
           type: 'rejected-too-high-bid',
         },
       ]);
@@ -458,7 +463,7 @@ describe('AuctionEtcService', () => {
           ] satisfies Prisma.AuctionsGetPayload<{}>[],
       );
 
-      const tx = { $executeRawUnsafe: vitest.fn() };
+      const tx = { $executeRawUnsafe: vitest.fn(), auctionBidders: { createMany: vitest.fn() } };
       (prisma.$transaction as Mock).mockImplementation(async (fn) => await fn(tx));
 
       await auctionEtcService.bidAuctionBatch([
@@ -478,6 +483,7 @@ describe('AuctionEtcService', () => {
           bidderUuid: '20000000-0000-0000-0000-000000000000',
           createdAt: new Date('2027-01-01T12:00:00.000Z'),
           requestId: '20000000-0000-0000-0000-000000000000',
+          auctionId: 1,
           type: 'rejected-too-high-bid',
         },
       ]);
@@ -514,7 +520,7 @@ describe('AuctionEtcService', () => {
           ] satisfies Prisma.AuctionsGetPayload<{}>[],
       );
 
-      const tx = { $executeRawUnsafe: vitest.fn() };
+      const tx = { $executeRawUnsafe: vitest.fn(), auctionBidders: { createMany: vitest.fn() } };
       (prisma.$transaction as Mock).mockImplementation(async (fn) => await fn(tx));
 
       await auctionEtcService.bidAuctionBatch([
@@ -534,6 +540,7 @@ describe('AuctionEtcService', () => {
           bidderUuid: '20000000-0000-0000-0000-000000000000',
           createdAt: new Date('2027-01-01T12:00:00.000Z'),
           requestId: '20000000-0000-0000-0000-000000000000',
+          auctionId: 1,
           type: 'success',
         },
       ]);
@@ -580,7 +587,7 @@ describe('AuctionEtcService', () => {
           ] satisfies Prisma.AuctionsGetPayload<{}>[],
       );
 
-      const tx = { $executeRawUnsafe: vitest.fn() };
+      const tx = { $executeRawUnsafe: vitest.fn(), auctionBidders: { createMany: vitest.fn() } };
       (prisma.$transaction as Mock).mockImplementation(async (fn) => await fn(tx));
 
       await auctionEtcService.bidAuctionBatch([
@@ -600,6 +607,7 @@ describe('AuctionEtcService', () => {
           bidderUuid: '20000000-0000-0000-0000-000000000000',
           createdAt: new Date('2027-01-01T12:00:00.000Z'),
           requestId: '20000000-0000-0000-0000-000000000000',
+          auctionId: 1,
           type: 'rejected-period',
         },
       ]);
@@ -636,7 +644,7 @@ describe('AuctionEtcService', () => {
           ] satisfies Prisma.AuctionsGetPayload<{}>[],
       );
 
-      const tx = { $executeRawUnsafe: vitest.fn() };
+      const tx = { $executeRawUnsafe: vitest.fn(), auctionBidders: { createMany: vitest.fn() } };
       (prisma.$transaction as Mock).mockImplementation(async (fn) => await fn(tx));
 
       await auctionEtcService.bidAuctionBatch([
@@ -656,6 +664,7 @@ describe('AuctionEtcService', () => {
           bidderUuid: '20000000-0000-0000-0000-000000000000',
           createdAt: new Date('2027-01-01T12:00:00.000Z'),
           requestId: '20000000-0000-0000-0000-000000000000',
+          auctionId: 1,
           type: 'rejected-period',
         },
       ]);
@@ -692,7 +701,7 @@ describe('AuctionEtcService', () => {
           ] satisfies Prisma.AuctionsGetPayload<{}>[],
       );
 
-      const tx = { $executeRawUnsafe: vitest.fn() };
+      const tx = { $executeRawUnsafe: vitest.fn(), auctionBidders: { createMany: vitest.fn() } };
       (prisma.$transaction as Mock).mockImplementation(async (fn) => await fn(tx));
 
       await auctionEtcService.bidAuctionBatch([
@@ -712,6 +721,7 @@ describe('AuctionEtcService', () => {
           bidderUuid: '20000000-0000-0000-0000-000000000000',
           createdAt: new Date('2027-01-01T12:00:00.000Z'),
           requestId: '20000000-0000-0000-0000-000000000000',
+          auctionId: 1,
           type: 'rejected-seller',
         },
       ]);
@@ -748,7 +758,7 @@ describe('AuctionEtcService', () => {
           ] satisfies Prisma.AuctionsGetPayload<{}>[],
       );
 
-      const tx = { $executeRawUnsafe: vitest.fn() };
+      const tx = { $executeRawUnsafe: vitest.fn(), auctionBidders: { createMany: vitest.fn() } };
       (prisma.$transaction as Mock).mockImplementation(async (fn) => await fn(tx));
 
       await auctionEtcService.bidAuctionBatch([
@@ -768,6 +778,7 @@ describe('AuctionEtcService', () => {
           bidderUuid: '20000000-0000-0000-0000-000000000000',
           createdAt: new Date('2027-01-01T12:00:00.000Z'),
           requestId: '20000000-0000-0000-0000-000000000000',
+          auctionId: 1,
           type: 'rejected-amount',
         },
       ]);
@@ -804,7 +815,7 @@ describe('AuctionEtcService', () => {
           ] satisfies Prisma.AuctionsGetPayload<{}>[],
       );
 
-      const tx = { $executeRawUnsafe: vitest.fn() };
+      const tx = { $executeRawUnsafe: vitest.fn(), auctionBidders: { createMany: vitest.fn() } };
       (prisma.$transaction as Mock).mockImplementation(async (fn) => await fn(tx));
 
       await auctionEtcService.bidAuctionBatch([
@@ -824,6 +835,7 @@ describe('AuctionEtcService', () => {
           bidderUuid: '20000000-0000-0000-0000-000000000000',
           createdAt: new Date('2027-01-01T12:00:00.000Z'),
           requestId: '20000000-0000-0000-0000-000000000000',
+          auctionId: 1,
           type: 'rejected-too-high-bid',
         },
       ]);
@@ -860,7 +872,7 @@ describe('AuctionEtcService', () => {
           ] satisfies Prisma.AuctionsGetPayload<{}>[],
       );
 
-      const tx = { $executeRawUnsafe: vitest.fn() };
+      const tx = { $executeRawUnsafe: vitest.fn(), auctionBidders: { createMany: vitest.fn() } };
       (prisma.$transaction as Mock).mockImplementation(async (fn) => await fn(tx));
 
       await auctionEtcService.bidAuctionBatch([
@@ -880,6 +892,7 @@ describe('AuctionEtcService', () => {
           bidderUuid: '20000000-0000-0000-0000-000000000000',
           createdAt: new Date('2027-01-01T12:00:00.000Z'),
           requestId: '20000000-0000-0000-0000-000000000000',
+          auctionId: 1,
           type: 'rejected-too-high-bid',
         },
       ]);
@@ -916,7 +929,7 @@ describe('AuctionEtcService', () => {
           ] satisfies Prisma.AuctionsGetPayload<{}>[],
       );
 
-      const tx = { $executeRawUnsafe: vitest.fn() };
+      const tx = { $executeRawUnsafe: vitest.fn(), auctionBidders: { createMany: vitest.fn() } };
       (prisma.$transaction as Mock).mockImplementation(async (fn) => await fn(tx));
 
       await auctionEtcService.bidAuctionBatch([
@@ -936,6 +949,7 @@ describe('AuctionEtcService', () => {
           bidderUuid: '20000000-0000-0000-0000-000000000000',
           createdAt: new Date('2027-01-01T12:00:00.000Z'),
           requestId: '20000000-0000-0000-0000-000000000000',
+          auctionId: 1,
           type: 'rejected-duplicate',
         },
       ]);
@@ -972,7 +986,7 @@ describe('AuctionEtcService', () => {
           ] satisfies Prisma.AuctionsGetPayload<{}>[],
       );
 
-      const tx = { $executeRawUnsafe: vitest.fn() };
+      const tx = { $executeRawUnsafe: vitest.fn(), auctionBidders: { createMany: vitest.fn() } };
       (prisma.$transaction as Mock).mockImplementation(async (fn) => await fn(tx));
 
       await auctionEtcService.bidAuctionBatch([
@@ -1019,7 +1033,7 @@ describe('AuctionEtcService', () => {
           ] satisfies Prisma.AuctionsGetPayload<{}>[],
       );
 
-      const tx = { $executeRawUnsafe: vitest.fn() };
+      const tx = { $executeRawUnsafe: vitest.fn(), auctionBidders: { createMany: vitest.fn() } };
       (prisma.$transaction as Mock).mockImplementation(async (fn) => await fn(tx));
 
       const bidders: BidAuctionBatchInput[] = [
@@ -1121,7 +1135,9 @@ describe('AuctionEtcService', () => {
           { ...bidders[7], type: 'success' },
           { ...bidders[9], type: 'rejected-too-high-bid' },
           { ...bidders[10], type: 'rejected-too-high-bid' },
-        ].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime()),
+        ]
+          .map((bidder) => ({ ...bidder, auctionId: 1 }))
+          .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime()),
       );
       expect(tx.$executeRawUnsafe.mock.calls[0][0]).toBe(`
         UPDATE \"Auctions\"
@@ -1179,7 +1195,7 @@ describe('AuctionEtcService', () => {
           ] satisfies Prisma.AuctionsGetPayload<{}>[],
       );
 
-      const tx = { $executeRawUnsafe: vitest.fn() };
+      const tx = { $executeRawUnsafe: vitest.fn(), auctionBidders: { createMany: vitest.fn() } };
       (prisma.$transaction as Mock).mockImplementation(async (fn) => await fn(tx));
 
       const bidders: BidAuctionBatchInput[] = [
@@ -1295,7 +1311,12 @@ describe('AuctionEtcService', () => {
           { ...bidders[5], type: 'success' },
           { ...bidders[10], type: 'rejected-amount' },
           { ...bidders[1], type: 'success' },
-        ].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime()),
+        ]
+          .map((bidder) => ({
+            ...bidder,
+            auctionId: bidder.auctionUuid === '10000000-0000-0000-0000-000000000000' ? 1 : 2,
+          }))
+          .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime()),
       );
       expect(tx.$executeRawUnsafe.mock.calls[0][0]).toBe(`
         UPDATE \"Auctions\"

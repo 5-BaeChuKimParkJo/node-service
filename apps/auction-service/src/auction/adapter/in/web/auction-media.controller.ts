@@ -1,10 +1,11 @@
 import { BadRequestException, Controller, Get, Param, Post, Req, Res, Version } from '@nestjs/common';
 import { ApiBearerAuth, ApiConsumes, ApiOkResponse } from '@nestjs/swagger';
-import { JwtUser, User } from '@app/common';
+import { JwtUser } from '@app/common/decorator/jwt-user.decorator';
+import { User } from '@app/common/types/user';
 import { FastifyReply, FastifyRequest } from 'fastify';
 import { UploadAuctionImageUseCase } from '../../../application/port/in/upload-auction-image.use-case';
 import { AuctionFileStoragePort } from '../../../application/port/out/auction-file-storage-port';
-import { isAuctionImageKey } from '../../../application/use-case/auction-image-key';
+import { isAuctionImageKey } from '../../../application/service/auction-image-key';
 
 @Controller('auction-images')
 export class AuctionMediaController {
@@ -34,6 +35,9 @@ export class AuctionMediaController {
       throw new BadRequestException('유효하지 않은 이미지 키입니다.');
     }
     const object = await this.storage.getObject(key);
-    return reply.header('Content-Type', object.contentType).header('Cache-Control', 'public, max-age=31536000, immutable').send(object.body);
+    return reply
+      .header('Content-Type', object.contentType)
+      .header('Cache-Control', 'public, max-age=31536000, immutable')
+      .send(object.body);
   }
 }

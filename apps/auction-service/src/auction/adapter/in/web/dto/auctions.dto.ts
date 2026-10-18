@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-export class AuctionsRequestDto {
+export class AuctionsRequest {
   @ApiProperty({
     required: false,
     type: Date,
@@ -16,7 +16,7 @@ export class AuctionsRequestDto {
   auctionUuid?: string;
 }
 
-class AuctionsNextCursorResponseDto {
+class AuctionsNextCursorResponse {
   @ApiProperty({ type: Date })
   createdAt!: string;
 
@@ -24,7 +24,7 @@ class AuctionsNextCursorResponseDto {
   auctionUuid!: string;
 }
 
-class AuctionsImageResponseDto {
+class AuctionsImageResponse {
   @ApiProperty({ type: Number })
   auctionImageId!: number;
 
@@ -35,7 +35,7 @@ class AuctionsImageResponseDto {
   order!: number;
 }
 
-class AuctionsItemResponseDto {
+class AuctionsItemResponse {
   @ApiProperty({ type: String })
   auctionUuid!: string;
 
@@ -87,14 +87,14 @@ class AuctionsItemResponseDto {
   @ApiProperty({ type: [Number] })
   tagIds!: number[];
 
-  @ApiProperty({ type: [AuctionsImageResponseDto] })
-  images!: AuctionsImageResponseDto[];
+  @ApiProperty({ type: [AuctionsImageResponse] })
+  images!: AuctionsImageResponse[];
 }
 
-export class AuctionsResponseDto {
-  @ApiProperty({ type: [AuctionsItemResponseDto] })
-  items!: AuctionsItemResponseDto[];
+export class AuctionsResponse {
+  @ApiProperty({ type: [AuctionsItemResponse] })
+  items!: AuctionsItemResponse[];
 
-  @ApiProperty({ type: AuctionsNextCursorResponseDto, nullable: true })
-  nextCursor!: AuctionsNextCursorResponseDto | null;
+  @ApiProperty({ type: AuctionsNextCursorResponse, nullable: true })
+  nextCursor!: AuctionsNextCursorResponse | null;
 }

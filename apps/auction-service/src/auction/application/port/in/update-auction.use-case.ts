@@ -1,7 +1,7 @@
-import { User } from '@app/common';
-import { UpdateAuctionCommand } from '../dto/update-auction.command';
-import { UpdateAuctionResponse } from '../dto/update-auction.response';
+import { User } from '@app/common/types/user';
+import { UpdateAuctionCommand } from '../../model/update-auction.command';
+import { UpdateAuctionResult } from '../../model/update-auction.result';
 
 export abstract class UpdateAuctionUseCase {
-  abstract execute: (command: UpdateAuctionCommand, user: User) => Promise<UpdateAuctionResponse>;
+  abstract execute: (command: UpdateAuctionCommand, user: User) => Promise<UpdateAuctionResult>;
 }

@@ -1,8 +1,8 @@
-import { MyBidsResponseDto } from '../dto/my-bids.dto';
+import { MyBidsResponse } from '../dto/my-bids.dto';
 import { MyBidsOutput } from '../schema/my-bids.schema';
 
 export class MyBidsMapper {
-  static toResponse = (output: MyBidsOutput): MyBidsResponseDto => {
+  static toResponse = (output: MyBidsOutput): MyBidsResponse => {
     return {
       auction: {
         ...output.auction,

@@ -1,6 +1,6 @@
-import { AuctionsByIdsCommand } from '../dto/auctions-by-ids.command';
-import { AuctionsByIdsResponse } from '../dto/auctions-by-ids.response';
+import { AuctionsByIdsCommand } from '../../model/auctions-by-ids.command';
+import { AuctionsByIdsResult } from '../../model/auctions-by-ids.result';
 
 export abstract class AuctionsByIdsUseCase {
-  abstract execute: (command: AuctionsByIdsCommand) => Promise<AuctionsByIdsResponse>;
+  abstract execute: (command: AuctionsByIdsCommand) => Promise<AuctionsByIdsResult>;
 }

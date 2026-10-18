@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-export class MyBidsResponseDto {
+export class MyBidsResponse {
   @ApiProperty({ type: String })
   auctionUuid!: string;
 

@@ -1,11 +1,12 @@
-import { AppException, ErrorCode } from '@app/common';
-import { AuctionResponseDto } from '../dto/auction-dto';
+import { AppException } from '@app/common/common/app.exception';
+import { ErrorCode } from '@app/common/common/const';
+import { AuctionResponse } from '../dto/auction-dto';
 import { Auction } from '../schema/auction.schema';
 import { HttpStatus } from '@nestjs/common';
-import { UsersAuctionResponseDto } from '../dto/users-auction-dto';
+import { UsersAuctionResponse } from '../dto/users-auction-dto';
 
 export class UsersAuctionMapper {
-  static toResponseDto = (auction: Omit<Auction, 'seller'>): UsersAuctionResponseDto => {
+  static toResponseDto = (auction: Omit<Auction, 'seller'>): UsersAuctionResponse => {
     return {
       ...auction,
       status: UsersAuctionMapper.mapAuctionStatus(auction),

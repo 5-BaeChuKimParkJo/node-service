@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-class MyBidAuctionImagesResponseDto {
+class MyBidAuctionImagesResponse {
   @ApiProperty({ type: Number })
   auctionImageId!: number;
 
@@ -11,7 +11,7 @@ class MyBidAuctionImagesResponseDto {
   order!: number;
 }
 
-class MyBidCategoryResponseDto {
+class MyBidCategoryResponse {
   @ApiProperty({ type: Number })
   categoryId!: number;
 
@@ -25,7 +25,7 @@ class MyBidCategoryResponseDto {
   imageUrl?: string | null;
 }
 
-class MyBidTagResponseDto {
+class MyBidTagResponse {
   @ApiProperty({ type: Number })
   tagId!: number;
 
@@ -33,7 +33,7 @@ class MyBidTagResponseDto {
   name!: string;
 }
 
-class MyBidMemberResponseDto {
+class MyBidMemberResponse {
   @ApiProperty({ type: String })
   memberUuid!: string;
 
@@ -56,7 +56,7 @@ class MyBidMemberResponseDto {
   point!: number | null;
 }
 
-class MyBidsAuctionResponseDto {
+class MyBidsAuctionResponse {
   @ApiProperty({ enum: ['auction'] })
   type!: 'auction';
 
@@ -108,20 +108,20 @@ class MyBidsAuctionResponseDto {
   @ApiProperty({ enum: ['waiting', 'active', 'ended'] })
   status!: 'waiting' | 'active' | 'ended';
 
-  @ApiProperty({ type: MyBidCategoryResponseDto, nullable: true })
-  category!: MyBidCategoryResponseDto | null;
+  @ApiProperty({ type: MyBidCategoryResponse, nullable: true })
+  category!: MyBidCategoryResponse | null;
 
-  @ApiProperty({ type: [MyBidTagResponseDto] })
-  tags!: MyBidTagResponseDto[];
+  @ApiProperty({ type: [MyBidTagResponse] })
+  tags!: MyBidTagResponse[];
 
-  @ApiProperty({ type: MyBidMemberResponseDto })
-  seller!: MyBidMemberResponseDto;
+  @ApiProperty({ type: MyBidMemberResponse })
+  seller!: MyBidMemberResponse;
 
-  @ApiProperty({ type: [MyBidAuctionImagesResponseDto] })
-  images!: MyBidAuctionImagesResponseDto[];
+  @ApiProperty({ type: [MyBidAuctionImagesResponse] })
+  images!: MyBidAuctionImagesResponse[];
 }
 
-class MyBidsAuctionBidderResponseDto {
+class MyBidsAuctionBidderResponse {
   @ApiProperty({ type: String })
   bidderUuid!: string;
 
@@ -132,10 +132,10 @@ class MyBidsAuctionBidderResponseDto {
   createdAt!: string;
 }
 
-export class MyBidsResponseDto {
-  @ApiProperty({ type: MyBidsAuctionBidderResponseDto })
-  bidder!: MyBidsAuctionBidderResponseDto;
+export class MyBidsResponse {
+  @ApiProperty({ type: MyBidsAuctionBidderResponse })
+  bidder!: MyBidsAuctionBidderResponse;
 
-  @ApiProperty({ type: MyBidsAuctionResponseDto })
-  auction!: MyBidsAuctionResponseDto;
+  @ApiProperty({ type: MyBidsAuctionResponse })
+  auction!: MyBidsAuctionResponse;
 }

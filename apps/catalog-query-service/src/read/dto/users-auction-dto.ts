@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { CategoryResponseDto, TagResponseDto } from './common-dto';
+import { CategoryResponse, TagResponse } from './common-dto';
 
-class AuctionImageResponseDto {
+class AuctionImageResponse {
   @ApiProperty({ type: Number })
   auctionImageId!: number;
 
@@ -12,7 +12,7 @@ class AuctionImageResponseDto {
   order!: number;
 }
 
-export class UsersAuctionResponseDto {
+export class UsersAuctionResponse {
   @ApiProperty({ enum: ['auction'] })
   type!: 'auction';
 
@@ -64,12 +64,12 @@ export class UsersAuctionResponseDto {
   @ApiProperty({ enum: ['waiting', 'active', 'ended'] })
   status!: 'waiting' | 'active' | 'ended';
 
-  @ApiProperty({ type: CategoryResponseDto, nullable: true })
-  category!: CategoryResponseDto | null;
+  @ApiProperty({ type: CategoryResponse, nullable: true })
+  category!: CategoryResponse | null;
 
-  @ApiProperty({ type: [TagResponseDto] })
-  tags!: TagResponseDto[];
+  @ApiProperty({ type: [TagResponse] })
+  tags!: TagResponse[];
 
-  @ApiProperty({ type: [AuctionImageResponseDto] })
-  images!: AuctionImageResponseDto[];
+  @ApiProperty({ type: [AuctionImageResponse] })
+  images!: AuctionImageResponse[];
 }

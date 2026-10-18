@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-export class AuctionAdminListRequestDto {
+export class AuctionAdminListRequest {
   @ApiProperty({ required: false })
   query?: string;
 
@@ -14,7 +14,7 @@ export class AuctionAdminListRequestDto {
   auctionUuid?: string;
 }
 
-export class AuctionAdminActionRequestDto {
+export class AuctionAdminActionRequest {
   @ApiProperty({ enum: ['hide', 'restore', 'force-end'] })
   action!: string;
 
@@ -22,7 +22,7 @@ export class AuctionAdminActionRequestDto {
   reason!: string;
 }
 
-export class AuctionAdminBidsRequestDto {
+export class AuctionAdminBidsRequest {
   @ApiProperty({ required: false, format: 'date-time' })
   createdAt?: string;
 

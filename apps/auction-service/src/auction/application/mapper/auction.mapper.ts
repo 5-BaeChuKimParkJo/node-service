@@ -1,14 +1,15 @@
-import AuctionDomain, { AuctionProps } from '../../domain/model/auction.domain';
-import { AuctionsResponse } from '../port/dto/auctions.response';
+import Auction, { AuctionProps } from '../../domain/model/auction';
+import { AuctionsResult } from '../model/auctions.result';
 import { HttpStatus, Injectable } from '@nestjs/common';
 import { AuctionFileStoragePort } from '../port/out/auction-file-storage-port';
-import { ErrorCode, AppException } from '@app/common';
+import { ErrorCode } from '@app/common/common/const';
+import { AppException } from '@app/common/common/app.exception';
 
 @Injectable()
 export class AuctionMapper {
   constructor(private readonly auctionFileStoragePort: AuctionFileStoragePort) {}
 
-  toResponse = (auction: AuctionDomain): AuctionsResponse['items'][number] => {
+  toResponse = (auction: Auction): AuctionsResult['items'][number] => {
     const snapshot = auction.getSnapshot();
 
     return {

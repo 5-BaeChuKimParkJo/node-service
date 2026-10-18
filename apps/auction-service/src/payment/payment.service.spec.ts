@@ -8,46 +8,61 @@ describe('winner checkout state machine', () => {
     expect(store.state.auction.checkoutLockedAt).toBeNull();
   });
 
-  it.each([sellerUuid, '40000000-0000-4000-8000-000000000004'])('rejects non-owner %s on GET and prepare', async user => {
-    const { service, store } = fixture();
-    await expect(service.get(auctionUuid, user)).rejects.toMatchObject({ status: 403 });
-    await expect(service.prepare(auctionUuid, user)).rejects.toMatchObject({ status: 403 });
-    expect(store.state.purchase).toBeNull();
-  });
+  it.each([sellerUuid, '40000000-0000-4000-8000-000000000004'])(
+    'rejects non-owner %s on GET and prepare',
+    async (user) => {
+      const { service, store } = fixture();
+      await expect(service.get(auctionUuid, user)).rejects.toMatchObject({ status: 403 });
+      await expect(service.prepare(auctionUuid, user)).rejects.toMatchObject({ status: 403 });
+      expect(store.state.purchase).toBeNull();
+    },
+  );
 
-  it.each(['future', 'hidden', 'cancelled', 'deleted', 'no-bids', 'zero', 'unsafe-amount'])('blocks invalid auction: %s', async kind => {
-    const { service, store } = fixture();
-    const a = store.state.auction;
-    if (kind === 'future') a.endAt = new Date('2099-01-01');
-    if (kind === 'hidden' || kind === 'cancelled') a.status = kind;
-    if (kind === 'deleted') a.deletedAt = new Date();
-    if (kind === 'no-bids') a.currentBidderUuid = null;
-    if (kind === 'zero') a.currentBid = 0n;
-    if (kind === 'unsafe-amount') a.currentBid = 9007199254740993n;
-    if (kind === 'no-bids') await expect(service.get(auctionUuid, buyerUuid)).rejects.toMatchObject({ status: 403 });
-    else expect((await service.get(auctionUuid, buyerUuid)).eligible).toBe(false);
-    await expect(service.prepare(auctionUuid, buyerUuid)).rejects.toMatchObject({ status: kind === 'no-bids' ? 403 : 409 });
-    expect(store.state.purchase).toBeNull();
-  });
+  it.each(['future', 'hidden', 'cancelled', 'deleted', 'no-bids', 'zero', 'unsafe-amount'])(
+    'blocks invalid auction: %s',
+    async (kind) => {
+      const { service, store } = fixture();
+      const a = store.state.auction;
+      if (kind === 'future') a.endAt = new Date('2099-01-01');
+      if (kind === 'hidden' || kind === 'cancelled') a.status = kind;
+      if (kind === 'deleted') a.deletedAt = new Date();
+      if (kind === 'no-bids') a.currentBidderUuid = null;
+      if (kind === 'zero') a.currentBid = 0n;
+      if (kind === 'unsafe-amount') a.currentBid = 9007199254740993n;
+      if (kind === 'no-bids') await expect(service.get(auctionUuid, buyerUuid)).rejects.toMatchObject({ status: 403 });
+      else expect((await service.get(auctionUuid, buyerUuid)).eligible).toBe(false);
+      await expect(service.prepare(auctionUuid, buyerUuid)).rejects.toMatchObject({
+        status: kind === 'no-bids' ? 403 : 409,
+      });
+      expect(store.state.purchase).toBeNull();
+    },
+  );
 
   it('freezes one purchase and reuses one attempt during concurrent preparation', async () => {
     const { service, store } = fixture();
     const views = await Promise.all(Array.from({ length: 8 }, () => service.prepare(auctionUuid, buyerUuid)));
-    expect(new Set(views.map(v => v.purchase!.attempt!.orderId)).size).toBe(1);
+    expect(new Set(views.map((v) => v.purchase!.attempt!.orderId)).size).toBe(1);
     expect(store.state.auction.checkoutLockedAt).toBeInstanceOf(Date);
     expect(store.state.purchase!.attempts).toHaveLength(1);
     store.state.auction.currentBid = 99999n;
     store.state.auction.title = 'Changed';
-    expect((await service.prepare(auctionUuid, buyerUuid)).purchase).toMatchObject({ amount: '15000', orderName: 'Final bid' });
+    expect((await service.prepare(auctionUuid, buyerUuid)).purchase).toMatchObject({
+      amount: '15000',
+      orderName: 'Final bid',
+    });
   });
 
   it('rejects tampered amounts and a key belonging to another attempt', async () => {
     const { service, provider } = fixture();
     const view = await service.prepare(auctionUuid, buyerUuid);
     const orderId = view.purchase!.attempt!.orderId;
-    await expect(service.confirm(auctionUuid, buyerUuid, { orderId, paymentKey: 'pk', amount: '15001' })).rejects.toMatchObject({ status: 409 });
+    await expect(
+      service.confirm(auctionUuid, buyerUuid, { orderId, paymentKey: 'pk', amount: '15001' }),
+    ).rejects.toMatchObject({ status: 409 });
     await service.confirm(auctionUuid, buyerUuid, { orderId, paymentKey: 'pk', amount: '15000' });
-    await expect(service.confirm(auctionUuid, buyerUuid, { orderId, paymentKey: 'different', amount: '15000' })).rejects.toMatchObject({ status: 409 });
+    await expect(
+      service.confirm(auctionUuid, buyerUuid, { orderId, paymentKey: 'different', amount: '15000' }),
+    ).rejects.toMatchObject({ status: 409 });
     expect(provider.confirms).toHaveLength(1);
   });
 
@@ -57,9 +72,16 @@ describe('winner checkout state machine', () => {
     const orderId = prepared.purchase!.attempt!.orderId;
     const key = store.state.purchase!.attempts[0].confirmIdempotencyKey;
     const body = { orderId, paymentKey: 'pk', amount: '15000' };
-    const views = await Promise.all([service.confirm(auctionUuid, buyerUuid, body), service.confirm(auctionUuid, buyerUuid, body)]);
+    const views = await Promise.all([
+      service.confirm(auctionUuid, buyerUuid, body),
+      service.confirm(auctionUuid, buyerUuid, body),
+    ]);
     expect(provider.confirms).toEqual([{ orderId, paymentKey: 'pk', amount: 15000, key }]);
-    expect((await service.get(auctionUuid, buyerUuid)).purchase).toMatchObject({ status: 'PAID', amount: '15000', paidAt: '2026-10-16T16:00:00.000Z' });
+    expect((await service.get(auctionUuid, buyerUuid)).purchase).toMatchObject({
+      status: 'PAID',
+      amount: '15000',
+      paidAt: '2026-10-16T16:00:00.000Z',
+    });
     expect(JSON.stringify(views)).not.toContain('Idempotency');
     expect(JSON.stringify(views)).not.toContain('paymentKey');
   });
@@ -79,34 +101,47 @@ describe('winner checkout state machine', () => {
     provider.failBeforeConfirm = true;
     expect((await service.reconcile(auctionUuid, buyerUuid)).purchase!.attempt!.status).toBe('UNKNOWN');
     expect(provider.confirms.length).toBeGreaterThanOrEqual(1);
-    expect(new Set(provider.confirms.map(c => c.key)).size).toBe(1);
+    expect(new Set(provider.confirms.map((c) => c.key)).size).toBe(1);
     expect(store.state.purchase!.attempts).toHaveLength(1);
     provider.payment = done;
     provider.failBeforeConfirm = false;
     expect((await service.reconcile(auctionUuid, buyerUuid)).purchase!.status).toBe('PAID');
   });
 
-  it.each(['totalAmount', 'orderId', 'paymentKey', 'currency'])('rejects a provider identity mismatch: %s', async field => {
-    const { service, provider } = fixture();
-    const orderId = (await service.prepare(auctionUuid, buyerUuid)).purchase!.attempt!.orderId;
-    provider.loseConfirm = true;
-    provider.queryError = true;
-    await service.confirm(auctionUuid, buyerUuid, { orderId, paymentKey: 'pk', amount: '15000' });
-    provider.queryError = false;
-    (provider.payment as any)[field] = field === 'totalAmount' ? 1 : 'wrong';
-    const result = await service.reconcile(auctionUuid, buyerUuid);
-    expect(result.purchase!.status).toBe('AWAITING_PAYMENT');
-    expect(result.purchase!.attempt!.status).toBe('UNKNOWN');
-  });
+  it.each(['totalAmount', 'orderId', 'paymentKey', 'currency'])(
+    'rejects a provider identity mismatch: %s',
+    async (field) => {
+      const { service, provider } = fixture();
+      const orderId = (await service.prepare(auctionUuid, buyerUuid)).purchase!.attempt!.orderId;
+      provider.loseConfirm = true;
+      provider.queryError = true;
+      await service.confirm(auctionUuid, buyerUuid, { orderId, paymentKey: 'pk', amount: '15000' });
+      provider.queryError = false;
+      (provider.payment as any)[field] = field === 'totalAmount' ? 1 : 'wrong';
+      const result = await service.reconcile(auctionUuid, buyerUuid);
+      expect(result.purchase!.status).toBe('AWAITING_PAYMENT');
+      expect(result.purchase!.attempt!.status).toBe('UNKNOWN');
+    },
+  );
 
   it('keeps virtual accounts pending until verified DONE', async () => {
     const { service, provider } = fixture();
     const orderId = (await service.prepare(auctionUuid, buyerUuid)).purchase!.attempt!.orderId;
-    provider.payment = { orderId, paymentKey: 'pk', totalAmount: 15000, balanceAmount: 15000, currency: 'KRW', status: 'WAITING_FOR_DEPOSIT' };
-    expect((await service.reconcile(auctionUuid, buyerUuid)).purchase).toMatchObject({ status: 'AWAITING_PAYMENT', attempt: { status: 'WAITING_FOR_DEPOSIT' } });
+    provider.payment = {
+      orderId,
+      paymentKey: 'pk',
+      totalAmount: 15000,
+      balanceAmount: 15000,
+      currency: 'KRW',
+      status: 'WAITING_FOR_DEPOSIT',
+    };
+    expect((await service.reconcile(auctionUuid, buyerUuid)).purchase).toMatchObject({
+      status: 'AWAITING_PAYMENT',
+      attempt: { status: 'WAITING_FOR_DEPOSIT' },
+    });
   });
 
-  it.each(['ABORTED', 'EXPIRED'])('only replaces a verified terminal %s attempt', async status => {
+  it.each(['ABORTED', 'EXPIRED'])('only replaces a verified terminal %s attempt', async (status) => {
     const { service, provider, store } = fixture();
     const orderId = (await service.prepare(auctionUuid, buyerUuid)).purchase!.attempt!.orderId;
     provider.payment = { orderId, paymentKey: 'pk', totalAmount: 15000, balanceAmount: 15000, currency: 'KRW', status };
@@ -132,7 +167,9 @@ describe('winner checkout state machine', () => {
     const paid = structuredClone(provider.payment);
     provider.loseCancel = true;
     provider.queryError = true;
-    expect((await service.cancel(auctionUuid, 'operator', 'Customer requested')).purchase!.attempt!.status).toBe('CANCELING');
+    expect((await service.cancel(auctionUuid, 'operator', 'Customer requested')).purchase!.attempt!.status).toBe(
+      'CANCELING',
+    );
     const key = store.state.purchase!.attempts[0].cancelIdempotencyKey;
     expect(provider.cancels[0]).toEqual({ paymentKey: 'pk', reason: 'Customer requested', key });
     provider.queryError = false;
@@ -163,7 +200,7 @@ describe('winner checkout state machine', () => {
     expect(store.writes).toBe(0);
   });
 
-  it.each(['hidden', 'deleted'])('rejects repeat prepare after auction becomes %s', async kind => {
+  it.each(['hidden', 'deleted'])('rejects repeat prepare after auction becomes %s', async (kind) => {
     const { service, store } = fixture();
     await service.prepare(auctionUuid, buyerUuid);
     if (kind === 'hidden') store.state.auction.status = 'hidden';
@@ -222,7 +259,7 @@ describe('winner checkout state machine', () => {
     expect(store.writes).toBe(0);
   });
 
-  it.each(['deleted', 'hidden'])('does not resume a lost confirmation after the auction becomes %s', async kind => {
+  it.each(['deleted', 'hidden'])('does not resume a lost confirmation after the auction becomes %s', async (kind) => {
     const { service, provider, store } = fixture();
     const orderId = (await service.prepare(auctionUuid, buyerUuid)).purchase!.attempt!.orderId;
     provider.failBeforeConfirm = true;
@@ -236,18 +273,28 @@ describe('winner checkout state machine', () => {
     expect(view.eligible).toBe(false);
   });
 
-  it.each(['PARTIAL_CANCELED', 'FUTURE_PROVIDER_STATUS'])('never replays confirmation after provider state %s', async status => {
-    const { service, provider } = fixture();
-    const orderId = (await service.prepare(auctionUuid, buyerUuid)).purchase!.attempt!.orderId;
-    provider.failBeforeConfirm = true;
-    await service.confirm(auctionUuid, buyerUuid, { orderId, paymentKey: 'pk', amount: '15000' });
-    provider.failBeforeConfirm = false;
-    provider.payment = { orderId, paymentKey: 'pk', totalAmount: 15000, balanceAmount: 10000, currency: 'KRW', status };
-    const result = await service.reconcile(auctionUuid, buyerUuid);
-    expect(result.purchase!.status).toBe('AWAITING_PAYMENT');
-    expect(result.purchase!.attempt!.status).toBe('UNKNOWN');
-    expect(provider.confirms).toHaveLength(1);
-  });
+  it.each(['PARTIAL_CANCELED', 'FUTURE_PROVIDER_STATUS'])(
+    'never replays confirmation after provider state %s',
+    async (status) => {
+      const { service, provider } = fixture();
+      const orderId = (await service.prepare(auctionUuid, buyerUuid)).purchase!.attempt!.orderId;
+      provider.failBeforeConfirm = true;
+      await service.confirm(auctionUuid, buyerUuid, { orderId, paymentKey: 'pk', amount: '15000' });
+      provider.failBeforeConfirm = false;
+      provider.payment = {
+        orderId,
+        paymentKey: 'pk',
+        totalAmount: 15000,
+        balanceAmount: 10000,
+        currency: 'KRW',
+        status,
+      };
+      const result = await service.reconcile(auctionUuid, buyerUuid);
+      expect(result.purchase!.status).toBe('AWAITING_PAYMENT');
+      expect(result.purchase!.attempt!.status).toBe('UNKNOWN');
+      expect(provider.confirms).toHaveLength(1);
+    },
+  );
 
   it('latches externally partial-canceled payments for review despite stale DONE reads', async () => {
     const { service, provider } = fixture();

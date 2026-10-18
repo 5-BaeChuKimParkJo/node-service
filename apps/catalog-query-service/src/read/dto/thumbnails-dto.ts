@@ -1,11 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-export class ThumbnailsRequestDto {
+export class ThumbnailsRequest {
   @ApiProperty({ type: [String] })
   ids!: string[];
 }
 
-export class ThumbnailsResponseDto {
+export class ThumbnailsResponse {
   @ApiProperty({ enum: ['auction', 'product'] })
   type!: 'auction' | 'product';
 

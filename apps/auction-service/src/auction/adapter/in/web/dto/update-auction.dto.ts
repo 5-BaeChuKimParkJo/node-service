@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-class UpdateAuctionImageRequestDto {
+class UpdateAuctionImageRequest {
   @ApiProperty({ type: String })
   key!: string;
 
@@ -8,7 +8,7 @@ class UpdateAuctionImageRequestDto {
   order!: number;
 }
 
-export class UpdateAuctionRequestDto {
+export class UpdateAuctionRequest {
   @ApiProperty({ required: false, type: Number, nullable: true })
   categoryId?: number | null;
 
@@ -45,11 +45,11 @@ export class UpdateAuctionRequestDto {
   @ApiProperty({ required: false, type: [Number] })
   tagIds?: number[];
 
-  @ApiProperty({ required: false, type: [UpdateAuctionImageRequestDto] })
-  images?: UpdateAuctionImageRequestDto[];
+  @ApiProperty({ required: false, type: [UpdateAuctionImageRequest] })
+  images?: UpdateAuctionImageRequest[];
 }
 
-class UpdateAuctionImageResponseDto {
+class UpdateAuctionImageResponse {
   @ApiProperty({ type: Number })
   auctionImageId!: number;
 
@@ -60,7 +60,7 @@ class UpdateAuctionImageResponseDto {
   order!: number;
 }
 
-export class UpdateAuctionResponseDto {
+export class UpdateAuctionResponse {
   @ApiProperty({ type: String })
   auctionUuid!: string;
 
@@ -112,6 +112,6 @@ export class UpdateAuctionResponseDto {
   @ApiProperty({ type: [Number] })
   tagIds!: number[];
 
-  @ApiProperty({ type: [UpdateAuctionImageResponseDto] })
-  images!: UpdateAuctionImageResponseDto[];
+  @ApiProperty({ type: [UpdateAuctionImageResponse] })
+  images!: UpdateAuctionImageResponse[];
 }

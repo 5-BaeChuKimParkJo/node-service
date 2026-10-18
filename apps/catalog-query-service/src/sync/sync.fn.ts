@@ -15,7 +15,9 @@ import axios from 'axios';
 import { ConfigService } from '@nestjs/config';
 import { EnvSchema } from '../common/env-schema';
 import { SyncRepository } from './sync.repository';
-import { KafkaAuctionServiceOutboxTopicValue, U, KafkaProductServiceOutboxTopicValue } from '@app/common';
+import { KafkaAuctionServiceOutboxTopicValue } from '@app/common/schema/kafka-auction-service-outbox-topic.schema';
+import { U } from '@app/common/utils/fp-ts/index';
+import { KafkaProductServiceOutboxTopicValue } from '@app/common/schema/kafka-product-service-outbox-topic.schema';
 import { MongoCatalogTypeProduct } from '../common/schema/mongo-catalog.schema';
 
 @Injectable()

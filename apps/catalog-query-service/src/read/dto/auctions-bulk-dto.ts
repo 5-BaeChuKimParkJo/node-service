@@ -1,12 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { CategoryResponseDto, MemberResponseDto, TagResponseDto } from './common-dto';
+import { CategoryResponse, MemberResponse, TagResponse } from './common-dto';
 
-export class AuctionsBulkRequestDto {
+export class AuctionsBulkRequest {
   @ApiProperty({ type: [String] })
   auctionUuids!: string[];
 }
 
-class AuctionImageResponseDto {
+class AuctionImageResponse {
   @ApiProperty({ type: Number })
   auctionImageId!: number;
 
@@ -17,7 +17,7 @@ class AuctionImageResponseDto {
   order!: number;
 }
 
-export class AuctionsBulkResponseDto {
+export class AuctionsBulkResponse {
   @ApiProperty({ enum: ['auction'] })
   type!: 'auction';
 
@@ -69,15 +69,15 @@ export class AuctionsBulkResponseDto {
   @ApiProperty({ enum: ['waiting', 'active', 'ended'] })
   status!: 'waiting' | 'active' | 'ended';
 
-  @ApiProperty({ type: CategoryResponseDto, nullable: true })
-  category!: CategoryResponseDto | null;
+  @ApiProperty({ type: CategoryResponse, nullable: true })
+  category!: CategoryResponse | null;
 
-  @ApiProperty({ type: [TagResponseDto] })
-  tags!: TagResponseDto[];
+  @ApiProperty({ type: [TagResponse] })
+  tags!: TagResponse[];
 
-  @ApiProperty({ type: MemberResponseDto })
-  seller!: MemberResponseDto;
+  @ApiProperty({ type: MemberResponse })
+  seller!: MemberResponse;
 
-  @ApiProperty({ type: [AuctionImageResponseDto] })
-  images!: AuctionImageResponseDto[];
+  @ApiProperty({ type: [AuctionImageResponse] })
+  images!: AuctionImageResponse[];
 }

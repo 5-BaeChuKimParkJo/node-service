@@ -1,4 +1,4 @@
-import { User } from '@app/common';
+import { User } from '@app/common/types/user';
 import { Controller, Get, Query, Req, Res } from '@nestjs/common';
 import { ApiBearerAuth } from '@nestjs/swagger';
 import { FastifyReply, FastifyRequest } from 'fastify';

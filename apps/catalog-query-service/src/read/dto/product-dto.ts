@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { CategoryResponseDto, MemberResponseDto, TagResponseDto } from './common-dto';
+import { CategoryResponse, MemberResponse, TagResponse } from './common-dto';
 
-class ProductImageResponseDto {
+class ProductImageResponse {
   @ApiProperty({ type: Number })
   productImageId!: number;
 
@@ -12,7 +12,7 @@ class ProductImageResponseDto {
   order!: number;
 }
 
-export class ProductResponseDto {
+export class ProductResponse {
   @ApiProperty({ enum: ['product'] })
   type!: 'product';
 
@@ -70,15 +70,15 @@ export class ProductResponseDto {
   @ApiProperty({ type: Date })
   createdAt!: string;
 
-  @ApiProperty({ type: CategoryResponseDto })
-  category!: CategoryResponseDto;
+  @ApiProperty({ type: CategoryResponse })
+  category!: CategoryResponse;
 
-  @ApiProperty({ type: [TagResponseDto] })
-  tags!: TagResponseDto[];
+  @ApiProperty({ type: [TagResponse] })
+  tags!: TagResponse[];
 
-  @ApiProperty({ type: MemberResponseDto })
-  seller!: MemberResponseDto;
+  @ApiProperty({ type: MemberResponse })
+  seller!: MemberResponse;
 
-  @ApiProperty({ type: [ProductImageResponseDto] })
-  imageUrlList!: ProductImageResponseDto[];
+  @ApiProperty({ type: [ProductImageResponse] })
+  imageUrlList!: ProductImageResponse[];
 }

@@ -107,3 +107,25 @@ Official references:
 Tests use a fake provider and Fastify injection. The repository boundary tests
 verify parameterized row locking and transaction writes against a database double;
 they do not replace a disposable PostgreSQL integration/concurrency test.
+
+## Isolated PostgreSQL Verification
+
+`npm run test:payment:integration` migrates and tests only `TEST_DATABASE_URL`.
+It never falls back to `DB_URL`. The URL must use loopback PostgreSQL and a
+database name ending in `_test`; no production or Tailscale address is allowed.
+Create a disposable local database, then in PowerShell run:
+
+```powershell
+$env:TEST_DATABASE_URL = 'postgresql://test:test@127.0.0.1:5432/auction_test'
+npm run test:payment:integration
+```
+
+The suite covers simultaneous prepares, checkout-versus-bid row contention,
+duplicate confirmations, expired leases, and rollback of bid/outbox writes.
+It uses a fake provider and never calls Toss. Unit-only runs visibly skip these
+five tests without an explicit test database. Node Quality provisions PostgreSQL
+in CI and runs the suite before any service image can be published.
+
+Payment state lives in `domain`; the application depends only on
+`PaymentStorePort` and `PaymentProviderPort`. `PaymentPrismaAdapter` owns row
+locking and persistence; `TossPaymentAdapter` owns HTTP/provider validation.

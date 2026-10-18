@@ -13,3 +13,16 @@ domain/application/adapter dependencies. Ports must not expose Prisma/SDK types.
 Keep Kafka wire identities and transaction/idempotency semantics unchanged.
 Run tests and affected Nest app builds before release. Never commit credentials
 or generated Prisma/build output.
+
+Use `Request`/`Response` at web boundaries, `Command`/`Result` for application
+values, and `Adapter` for outbound implementations. Avoid `Dto`, `Domain` and
+`Impl` suffixes; domain names describe the business value itself. Module/provider
+composition belongs outside application/domain. Existing runtime identifiers and
+wire field names remain unchanged.
+
+Validation: `npm run test:checks`, `npm run check:naming`,
+`npm run check:architecture`, `npm run check:format`, `npm run test:unit`,
+then `npm run build:all`. Generate both Prisma clients before retained-app builds.
+`npm run test:payment:integration` requires an isolated loopback `_test` database
+in `TEST_DATABASE_URL`; it never uses the production `DB_URL`. See payment/README.
+Node Quality gates image publication without changing deployment branch filters.

@@ -1,0 +1,58 @@
+name: Node Quality
+
+on:
+  pull_request:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: auction_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready --health-interval 5s
+          --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Test commit policy
+        run: python -m unittest discover -s scripts -p test_check_conventions.py
+      - name: Check new commits
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: python scripts/check_conventions.py commit --base "$BASE" --head "$HEAD"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - name: Generate owned Prisma clients
+        run: |
+          npm run prisma:auction-service:generate
+          npm run prisma:notification-consumer-service:generate
+      - run: npm run test:checks
+      - run: npm run check:naming
+      - run: npm run check:architecture
+      - run: npm run check:format
+      - run: npm run test:unit
+      - name: Verify real PostgreSQL contention without a payment provider
+        env:
+          TEST_DATABASE_URL: postgresql://test:test@127.0.0.1:5432/auction_test
+        run: npm run test:payment:integration
+      - run: npm run build:all

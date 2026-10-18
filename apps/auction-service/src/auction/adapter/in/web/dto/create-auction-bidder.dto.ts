@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-export class CreateAuctionBidderRequestDto {
+export class CreateAuctionBidderRequest {
   @ApiProperty({ type: Number })
   bidAmount!: number;
 

@@ -6,18 +6,12 @@ import { S3Service } from '@app/common/s3/s3.service';
 import { ZodExceptionFilter } from '@app/common/filter/zod-exception.filter';
 import { BigIntToNumberInterceptor } from '@app/common/middleware/bigint-to-number.middleware';
 import { execSync } from 'child_process';
-import {
-  CreateAuctionRequestDto,
-  CreateAuctionResponseDto,
-} from '../src/auction/adapter/in/web/dto/create-auction.dto';
-import { AuctionsResponseDto } from '../src/auction/adapter/in/web/dto/auctions.dto';
-import { AuctionResponseDto } from '../src/auction/adapter/in/web/dto/auction.dto';
-import {
-  UpdateAuctionRequestDto,
-  UpdateAuctionResponseDto,
-} from '../src/auction/adapter/in/web/dto/update-auction.dto';
-import { CreateAuctionBidderRequestDto } from '../src/auction/adapter/in/web/dto/create-auction-bidder.dto';
-import { AuctionBiddersResponseDto } from '../src/auction/adapter/in/web/dto/auction-bidders.dto';
+import { CreateAuctionRequest, CreateAuctionResponse } from '../src/auction/adapter/in/web/dto/create-auction.dto';
+import { AuctionsResponse } from '../src/auction/adapter/in/web/dto/auctions.dto';
+import { AuctionResponse } from '../src/auction/adapter/in/web/dto/auction.dto';
+import { UpdateAuctionRequest, UpdateAuctionResponse } from '../src/auction/adapter/in/web/dto/update-auction.dto';
+import { CreateAuctionBidderRequest } from '../src/auction/adapter/in/web/dto/create-auction-bidder.dto';
+import { AuctionBiddersResponse } from '../src/auction/adapter/in/web/dto/auction-bidders.dto';
 import { KafkaService } from '@app/common/kafka/kafka.service';
 import { RedisModule } from '@app/common/redis/redis.module';
 
@@ -102,10 +96,10 @@ describe('AuctionService e2e', () => {
               order: 0,
             },
           ],
-        } satisfies CreateAuctionRequestDto);
+        } satisfies CreateAuctionRequest);
 
       expect(res.status).toBe(201);
-      const body = res.body as CreateAuctionResponseDto;
+      const body = res.body as CreateAuctionResponse;
       expect(body.auctionUuid).toBeDefined();
       expect(body.categoryId).toBe(i);
       expect(body.directDealLocation).toBe(`directDealLocation-${i}`);
@@ -121,7 +115,7 @@ describe('AuctionService e2e', () => {
     const res1 = await request(app.getHttpServer()).get('/api/v1/auctions');
 
     expect(res1.status).toBe(200);
-    const body1 = res1.body as AuctionsResponseDto;
+    const body1 = res1.body as AuctionsResponse;
     expect(body1.nextCursor).not.toBeNull();
     expect(body1.items.length).toBe(20);
     expect(body1.items[0].title).toBe('title-29');
@@ -130,7 +124,7 @@ describe('AuctionService e2e', () => {
     const res2 = await request(app.getHttpServer()).get('/api/v1/auctions').query(body1.nextCursor!);
 
     expect(res2.status).toBe(200);
-    const body2 = res2.body as AuctionsResponseDto;
+    const body2 = res2.body as AuctionsResponse;
     expect(body2.nextCursor).toBeNull();
     expect(body2.items.length).toBe(10);
     expect(body2.items[0].title).toBe('title-9');
@@ -141,12 +135,12 @@ describe('AuctionService e2e', () => {
     const listRes = await request(app.getHttpServer()).get('/api/v1/auctions');
 
     expect(listRes.status).toBe(200);
-    const listBody = listRes.body as AuctionsResponseDto;
+    const listBody = listRes.body as AuctionsResponse;
     const item = listBody.items[0];
     const res = await request(app.getHttpServer()).get(`/api/v1/auctions/${item.auctionUuid}`);
 
     expect(res.status).toBe(200);
-    const body = res.body as AuctionResponseDto;
+    const body = res.body as AuctionResponse;
     expect(body.auctionUuid).toBeDefined();
     expect(body.title).toBe('title-29');
     expect(body.categoryId).toBe(29);
@@ -162,7 +156,7 @@ describe('AuctionService e2e', () => {
     const listRes = await request(app.getHttpServer()).get('/api/v1/auctions');
 
     expect(listRes.status).toBe(200);
-    const listBody = listRes.body as AuctionsResponseDto;
+    const listBody = listRes.body as AuctionsResponse;
     const item = listBody.items[0];
     const res = await request(app.getHttpServer())
       .put(`/api/v1/auctions/${item.auctionUuid}`)
@@ -174,10 +168,10 @@ describe('AuctionService e2e', () => {
         endAt: '2030-06-10T15:00:00.000Z',
         isDirectDeal: false,
         productCondition: 'new',
-      } satisfies UpdateAuctionRequestDto);
+      } satisfies UpdateAuctionRequest);
 
     expect(res.status).toBe(200);
-    const body = res.body as UpdateAuctionResponseDto;
+    const body = res.body as UpdateAuctionResponse;
     expect(body.auctionUuid).toBeDefined();
     expect(body.title).toBe('updated-title');
     expect(body.description).toBe('updated-description');
@@ -191,7 +185,7 @@ describe('AuctionService e2e', () => {
     const listRes = await request(app.getHttpServer()).get('/api/v1/auctions');
 
     expect(listRes.status).toBe(200);
-    const listBody = listRes.body as AuctionsResponseDto;
+    const listBody = listRes.body as AuctionsResponse;
     const item = listBody.items[0];
     const res = await request(app.getHttpServer())
       .delete(`/api/v1/auctions/${item.auctionUuid}`)
@@ -202,14 +196,14 @@ describe('AuctionService e2e', () => {
     const listRes2 = await request(app.getHttpServer()).get('/api/v1/auctions');
 
     expect(listRes2.status).toBe(200);
-    const listBody2 = listRes2.body as AuctionsResponseDto;
+    const listBody2 = listRes2.body as AuctionsResponse;
     expect(listBody2.items.length).toBe(20);
     expect(listBody2.items[0].title).toBe('title-28');
 
     const listRes3 = await request(app.getHttpServer()).get('/api/v1/auctions').query(listBody2.nextCursor!);
 
     expect(listRes3.status).toBe(200);
-    const listBody3 = listRes3.body as AuctionsResponseDto;
+    const listBody3 = listRes3.body as AuctionsResponse;
     expect(listBody3.items.length).toBe(9);
     expect(listBody3.items[0].title).toBe('title-8');
   });
@@ -218,7 +212,7 @@ describe('AuctionService e2e', () => {
     const listRes = await request(app.getHttpServer()).get('/api/v1/auctions');
 
     expect(listRes.status).toBe(200);
-    const listBody = listRes.body as AuctionsResponseDto;
+    const listBody = listRes.body as AuctionsResponse;
     const item = listBody.items[0];
 
     const res = await request(app.getHttpServer())
@@ -226,14 +220,14 @@ describe('AuctionService e2e', () => {
       .set('Authorization', `Bearer ${userToken}`)
       .send({
         bidAmount: 10000,
-      } satisfies CreateAuctionBidderRequestDto);
+      } satisfies CreateAuctionBidderRequest);
 
     expect(res.status).toBe(201);
 
     const auctionBiddersRes = await request(app.getHttpServer()).get(`/api/v1/auctions/${item.auctionUuid}/bidders`);
 
     expect(auctionBiddersRes.status).toBe(200);
-    const auctionBiddersBody = auctionBiddersRes.body as AuctionBiddersResponseDto;
+    const auctionBiddersBody = auctionBiddersRes.body as AuctionBiddersResponse;
     expect(auctionBiddersBody.items.length).toBe(1);
     expect(auctionBiddersBody.items[0].bidAmount).toBe(10000);
   });

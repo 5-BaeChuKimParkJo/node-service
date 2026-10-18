@@ -3,7 +3,7 @@ import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { Batch, Consumer, KafkaMessage } from 'kafkajs';
 import { KafkaDlqTopicValue } from '@app/common/schema/kafka-dlq-topic.schema';
 import { auctionServiceBidderCreatedSchema } from '../auction/adapter/in/messaging/schema/auction-bidder-created.schema';
-import { AuctionServiceBidderCreatedDtoMapper } from '../auction/adapter/in/messaging/mapper/auction-service-bidder-created-dto.mapper';
+import { AuctionBidCreatedEventMapper } from '../auction/adapter/in/messaging/mapper/auction-bid-created-event.mapper';
 import { AuctionEtcService } from './auction-etc.service';
 
 @Injectable()
@@ -23,7 +23,7 @@ export class AuctionServiceBidderCreatedConsumer implements OnModuleInit, OnModu
     return messages
       .map((message) => message.value?.toString() ?? '{}')
       .map((value) => auctionServiceBidderCreatedSchema.parse(JSON.parse(value)))
-      .map((dto) => AuctionServiceBidderCreatedDtoMapper.toCommand(dto));
+      .map((dto) => AuctionBidCreatedEventMapper.toCommand(dto));
   };
 
   private commit = async (batch: Batch, resolveOffset: (offset: string) => void) => {

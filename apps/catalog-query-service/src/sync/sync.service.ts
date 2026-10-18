@@ -4,7 +4,9 @@ import * as A from 'fp-ts/Array';
 import * as O from 'fp-ts/Option';
 import * as E from 'fp-ts/Either';
 import { SyncFn } from './sync.fn';
-import { ErrorCode, AppException, KafkaAuctionServiceOutboxTopicValue } from '@app/common';
+import { ErrorCode } from '@app/common/common/const';
+import { AppException } from '@app/common/common/app.exception';
+import { KafkaAuctionServiceOutboxTopicValue } from '@app/common/schema/kafka-auction-service-outbox-topic.schema';
 import { KafkaProductServiceOutboxTopicValue } from '@app/common/schema/kafka-product-service-outbox-topic.schema';
 
 @Injectable()

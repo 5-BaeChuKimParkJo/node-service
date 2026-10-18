@@ -1,9 +1,9 @@
-import AuctionAdminDomain from '../../domain/model/auction-admin.domain';
+import AdminAuction from '../../domain/model/admin-auction';
 import { AuctionAdminMapper } from './auction-admin.mapper';
 
 it('serializes monetary bigint values as exact decimal strings', () => {
   const mapper = new AuctionAdminMapper({ toFullUrl: (key: string) => `http://minio/${key}` } as never);
-  const auction = new AuctionAdminDomain({
+  const auction = new AdminAuction({
     auctionId: 1n,
     auctionUuid: '10000000-0000-0000-0000-000000000000',
     categoryId: 1,
@@ -41,7 +41,7 @@ it('serializes monetary bigint values as exact decimal strings', () => {
     version: 0,
   });
 
-  const deleted = new AuctionAdminDomain({
+  const deleted = new AdminAuction({
     ...auction.getSnapshot(),
     status: 'hidden',
     deletedAt: new Date('2026-10-14T01:00:00.000Z'),

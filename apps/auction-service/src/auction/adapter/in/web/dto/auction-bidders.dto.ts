@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-export class AuctionBiddersRequestDto {
+export class AuctionBiddersRequest {
   @ApiProperty({
     required: false,
     type: Date,
@@ -16,7 +16,7 @@ export class AuctionBiddersRequestDto {
   bidAmount?: number;
 }
 
-class AuctionBiddersNextCursorResponseDto {
+class AuctionBiddersNextCursorResponse {
   @ApiProperty({ type: Date })
   createdAt!: string;
 
@@ -24,7 +24,7 @@ class AuctionBiddersNextCursorResponseDto {
   bidAmount!: number;
 }
 
-class AuctionBiddersItemResponseDto {
+class AuctionBiddersItemResponse {
   @ApiProperty({ type: String })
   auctionUuid!: string;
 
@@ -38,10 +38,10 @@ class AuctionBiddersItemResponseDto {
   createdAt!: string;
 }
 
-export class AuctionBiddersResponseDto {
-  @ApiProperty({ type: [AuctionBiddersItemResponseDto] })
-  items!: AuctionBiddersItemResponseDto[];
+export class AuctionBiddersResponse {
+  @ApiProperty({ type: [AuctionBiddersItemResponse] })
+  items!: AuctionBiddersItemResponse[];
 
-  @ApiProperty({ type: AuctionBiddersNextCursorResponseDto, nullable: true })
-  nextCursor!: AuctionBiddersNextCursorResponseDto | null;
+  @ApiProperty({ type: AuctionBiddersNextCursorResponse, nullable: true })
+  nextCursor!: AuctionBiddersNextCursorResponse | null;
 }

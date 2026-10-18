@@ -1,16 +1,16 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-export class NotificationsRequestDto {
+export class NotificationsRequest {
   @ApiProperty({ required: false, type: Number })
   notificationId?: number;
 }
 
-class NotificationsNextCursorResponseDto {
+class NotificationsNextCursorResponse {
   @ApiProperty({ type: Number })
   notificationId!: number;
 }
 
-class NotificationsItemResponseDto {
+class NotificationsItemResponse {
   @ApiProperty({ type: Number })
   notificationId!: number;
 
@@ -27,10 +27,10 @@ class NotificationsItemResponseDto {
   createdAt!: string;
 }
 
-export class NotificationsResponseDto {
-  @ApiProperty({ type: [NotificationsItemResponseDto] })
-  items!: NotificationsItemResponseDto[];
+export class NotificationsResponse {
+  @ApiProperty({ type: [NotificationsItemResponse] })
+  items!: NotificationsItemResponse[];
 
-  @ApiProperty({ type: NotificationsNextCursorResponseDto, nullable: true })
-  nextCursor!: NotificationsNextCursorResponseDto | null;
+  @ApiProperty({ type: NotificationsNextCursorResponse, nullable: true })
+  nextCursor!: NotificationsNextCursorResponse | null;
 }

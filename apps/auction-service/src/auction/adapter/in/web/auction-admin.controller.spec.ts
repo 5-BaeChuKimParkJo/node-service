@@ -2,14 +2,15 @@ import { VersioningType } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';
 import { Test } from '@nestjs/testing';
-import { BigIntToNumberInterceptor, ZodExceptionFilter } from '@app/common';
+import { BigIntToNumberInterceptor } from '@app/common/middleware/bigint-to-number.middleware';
+import { ZodExceptionFilter } from '@app/common/filter/zod-exception.filter';
 import { AuctionAdminController } from './auction-admin.controller';
 import { InternalAdminTokenGuard } from './internal-admin-token.guard';
-import { AuctionAdminService } from '../../../application/use-case/auction-admin.service';
+import { AuctionAdminService } from '../../../application/service/auction-admin.service';
 import { AuctionAdminMapper } from '../../../application/mapper/auction-admin.mapper';
 import { AuctionRepositoryPort } from '../../../application/port/out/auction-repository.port';
-import { AuctionPrismaRepository } from '../../out/postgresql/auction-prisma.repository';
-import AuctionAdminDomain from '../../../domain/model/auction-admin.domain';
+import { AuctionPrismaAdapter } from '../../out/postgresql/auction-prisma.adapter';
+import AdminAuction from '../../../domain/model/admin-auction';
 
 const auctionUuid = '10000000-0000-0000-0000-000000000000';
 const auctionBidderUuid = '20000000-0000-0000-0000-000000000000';
@@ -20,7 +21,7 @@ const createdAt = '2026-10-13T02:34:56.123456Z';
 
 describe('AuctionAdminController bid history HTTP contract', () => {
   let app: NestFastifyApplication;
-  let repository: AuctionPrismaRepository;
+  let repository: AuctionPrismaAdapter;
   const tx = {
     auctions: { findUnique: vi.fn() },
     auctionBidders: { count: vi.fn() },
@@ -29,7 +30,7 @@ describe('AuctionAdminController bid history HTTP contract', () => {
 
   beforeAll(async () => {
     const prisma = { $transaction: async (callback: (client: typeof tx) => Promise<unknown>) => callback(tx) };
-    repository = new AuctionPrismaRepository(prisma as never, {} as never, {} as never);
+    repository = new AuctionPrismaAdapter(prisma as never, {} as never, {} as never);
     const module = await Test.createTestingModule({
       controllers: [AuctionAdminController],
       providers: [
@@ -59,33 +60,62 @@ describe('AuctionAdminController bid history HTTP contract', () => {
     tx.$queryRaw.mockResolvedValue([{ auctionBidderUuid, bidderUuid, bidAmount: 9007199254740993n, createdAt }]);
   });
 
-  afterAll(async () => { await app?.close(); });
+  afterAll(async () => {
+    await app?.close();
+  });
 
   it.each(['list', 'detail', 'action'] as const)(
     'serializes all existing admin %s dates as ISO strings through the global interceptor',
     async (route) => {
       const date = new Date('2026-10-13T02:00:00.000Z');
-      const auction = new AuctionAdminDomain({
-        auctionId: 42n, auctionUuid, categoryId: null, title: 'Auction date regression', description: '',
-        minimumBid: 9007199254740993n, currentBid: 9007199254740995n, currentBidderUuid: null,
-        startAt: date, endAt: new Date('2026-10-13T05:00:00.000Z'), soldAt: date,
-        isDirectDeal: false, directDealLocation: null, status: 'hidden', productCondition: 'used',
-        viewCount: 1n, thumbnailKey: 'thumbnail.jpg', createdAt: date, updatedAt: date, deletedAt: date,
-        sellerUuid: bidderUuid, version: 7, tagIds: [], images: [],
+      const auction = new AdminAuction({
+        auctionId: 42n,
+        auctionUuid,
+        categoryId: null,
+        title: 'Auction date regression',
+        description: '',
+        minimumBid: 9007199254740993n,
+        currentBid: 9007199254740995n,
+        currentBidderUuid: null,
+        startAt: date,
+        endAt: new Date('2026-10-13T05:00:00.000Z'),
+        soldAt: date,
+        isDirectDeal: false,
+        directDealLocation: null,
+        status: 'hidden',
+        productCondition: 'used',
+        viewCount: 1n,
+        thumbnailKey: 'thumbnail.jpg',
+        createdAt: date,
+        updatedAt: date,
+        deletedAt: date,
+        sellerUuid: bidderUuid,
+        version: 7,
+        tagIds: [],
+        images: [],
       });
       vi.spyOn(repository, 'findAuctions').mockResolvedValue({
-        items: [auction], nextCursor: { createdAt: date, auctionUuid },
+        items: [auction],
+        nextCursor: { createdAt: date, auctionUuid },
       });
       vi.spyOn(repository, 'findAuction').mockResolvedValue(auction);
       vi.spyOn(repository, 'applyAdminAction').mockResolvedValue(auction);
-      vi.spyOn(repository, 'findAdminActions').mockResolvedValue([{
-        auctionAdminActionId: auctionBidderUuid, actor: 'operator', action: 'hide', reason: 'Review',
-        previousStatus: 'active', nextStatus: 'hidden', createdAt: date,
-      }]);
+      vi.spyOn(repository, 'findAdminActions').mockResolvedValue([
+        {
+          auctionAdminActionId: auctionBidderUuid,
+          actor: 'operator',
+          action: 'hide',
+          reason: 'Review',
+          previousStatus: 'active',
+          nextStatus: 'hidden',
+          createdAt: date,
+        },
+      ]);
 
       const url = `/api/v1/internal/admin/auctions${route === 'list' ? '' : `/${auctionUuid}`}${route === 'action' ? '/actions' : ''}`;
       const response = await app.inject({
-        method: route === 'action' ? 'POST' : 'GET', url,
+        method: route === 'action' ? 'POST' : 'GET',
+        url,
         headers: { 'x-admin-internal-token': token, 'x-admin-actor': 'operator' },
         ...(route === 'action' ? { payload: { action: 'hide', reason: 'Review' } } : {}),
       });
@@ -99,8 +129,10 @@ describe('AuctionAdminController bid history HTTP contract', () => {
         soldAt: '2026-10-13T02:00:00.000Z',
         updatedAt: '2026-10-13T02:00:00.000Z',
         deletedAt: '2026-10-13T02:00:00.000Z',
-        visibility: 'hidden', version: 7,
-        minimumBid: '9007199254740993', currentBid: '9007199254740995',
+        visibility: 'hidden',
+        version: 7,
+        minimumBid: '9007199254740993',
+        currentBid: '9007199254740995',
       });
       if (route === 'list') {
         expect(body.nextCursor).toEqual({ createdAt: '2026-10-13T02:00:00.000Z', auctionUuid });
@@ -122,7 +154,9 @@ describe('AuctionAdminController bid history HTTP contract', () => {
 
   it.each([undefined, 'incorrect-token'])('rejects unauthorized reads with token %s', async (value) => {
     const response = await app.inject({
-      method: 'GET', url: path, headers: value ? { 'x-admin-internal-token': value } : {},
+      method: 'GET',
+      url: path,
+      headers: value ? { 'x-admin-internal-token': value } : {},
     });
     expect(response.statusCode).toBe(401);
     expect(tx.auctions.findUnique).not.toHaveBeenCalled();
@@ -138,7 +172,9 @@ describe('AuctionAdminController bid history HTTP contract', () => {
     `?createdAt=2026-10-13T02:34:56Z&createdAt=2026-10-14T02:34:56Z&auctionBidderUuid=${auctionBidderUuid}`,
   ])('rejects an invalid or incomplete cursor %s', async (query) => {
     const response = await app.inject({
-      method: 'GET', url: path + query, headers: { 'x-admin-internal-token': token },
+      method: 'GET',
+      url: path + query,
+      headers: { 'x-admin-internal-token': token },
     });
     expect(response.statusCode).toBe(400);
     expect(tx.auctions.findUnique).not.toHaveBeenCalled();
@@ -146,7 +182,8 @@ describe('AuctionAdminController bid history HTTP contract', () => {
 
   it('rejects an invalid auction UUID before reaching the repository', async () => {
     const response = await app.inject({
-      method: 'GET', url: '/api/v1/internal/admin/auctions/invalid/bids',
+      method: 'GET',
+      url: '/api/v1/internal/admin/auctions/invalid/bids',
       headers: { 'x-admin-internal-token': token },
     });
     expect(response.statusCode).toBe(400);
@@ -155,7 +192,8 @@ describe('AuctionAdminController bid history HTTP contract', () => {
 
   it('accepts a complete ISO cursor without truncating fractional seconds', async () => {
     const response = await app.inject({
-      method: 'GET', url: `${path}?createdAt=${createdAt}&auctionBidderUuid=${auctionBidderUuid}`,
+      method: 'GET',
+      url: `${path}?createdAt=${createdAt}&auctionBidderUuid=${auctionBidderUuid}`,
       headers: { 'x-admin-internal-token': token },
     });
     expect(response.statusCode).toBe(200);
@@ -165,7 +203,8 @@ describe('AuctionAdminController bid history HTTP contract', () => {
   it('accepts ISO timezone offsets', async () => {
     const offset = encodeURIComponent('2026-10-13T11:34:56.123456+09:00');
     const response = await app.inject({
-      method: 'GET', url: `${path}?createdAt=${offset}&auctionBidderUuid=${auctionBidderUuid}`,
+      method: 'GET',
+      url: `${path}?createdAt=${offset}&auctionBidderUuid=${auctionBidderUuid}`,
       headers: { 'x-admin-internal-token': token },
     });
     expect(response.statusCode).toBe(200);

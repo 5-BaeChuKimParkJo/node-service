@@ -1,6 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { BigIntToNumberInterceptor, ZodExceptionFilter } from '@app/common';
+import { BigIntToNumberInterceptor } from '@app/common/middleware/bigint-to-number.middleware';
+import { ZodExceptionFilter } from '@app/common/filter/zod-exception.filter';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { VersioningType } from '@nestjs/common';
 import { FastifyAdapter, NestFastifyApplication } from '@nestjs/platform-fastify';

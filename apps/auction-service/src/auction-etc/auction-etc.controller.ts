@@ -1,12 +1,13 @@
 import { Controller, Get, Post, Version } from '@nestjs/common';
 import { AuctionEtcService } from './auction-etc.service';
 import { ApiBearerAuth, ApiOkResponse } from '@nestjs/swagger';
-import { MyBidsResponseDto } from './dto/my-bids.dto';
+import { MyBidsResponse } from './dto/my-bids.dto';
 import { AppException } from '@app/common/common/app.exception';
 import * as TE from 'fp-ts/TaskEither';
 import * as F from 'fp-ts/function';
 import * as A from 'fp-ts/Array';
-import { JwtUser, User } from '@app/common';
+import { JwtUser } from '@app/common/decorator/jwt-user.decorator';
+import { User } from '@app/common/types/user';
 import { MyBidsMapper } from './mapper/my-bids.mapper';
 
 @Controller()
@@ -16,8 +17,8 @@ export class AuctionEtcController {
   @Get('auctions/my-bids')
   @Version('1')
   @ApiBearerAuth()
-  @ApiOkResponse({ type: [MyBidsResponseDto] })
-  getMyBids(@JwtUser() user: User): TE.TaskEither<AppException, MyBidsResponseDto[]> {
+  @ApiOkResponse({ type: [MyBidsResponse] })
+  getMyBids(@JwtUser() user: User): TE.TaskEither<AppException, MyBidsResponse[]> {
     return F.pipe(this.auctionEtcService.getMyBids(user), TE.map(A.map(MyBidsMapper.toResponse)));
   }
 }

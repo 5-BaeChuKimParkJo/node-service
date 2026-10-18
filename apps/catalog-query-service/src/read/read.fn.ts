@@ -9,7 +9,9 @@ import * as TE from 'fp-ts/TaskEither';
 import * as E from 'fp-ts/Either';
 import * as A from 'fp-ts/Array';
 import { mongoCatalogTypeAuctionSchema } from '../common/schema/mongo-catalog.schema';
-import { ErrorCode, AppException, User } from '@app/common';
+import { ErrorCode } from '@app/common/common/const';
+import { AppException } from '@app/common/common/app.exception';
+import { User } from '@app/common/types/user';
 import axios from 'axios';
 import { ConfigService } from '@nestjs/config';
 import { EnvSchema } from '../common/env-schema';
@@ -17,7 +19,7 @@ import { z } from 'zod';
 import { HttpMember, httpMemberSchema } from './schema/http-member.schema';
 import { Thumbnail, thumbnailSchema } from './schema/thumbnail-schema';
 import { KafkaService } from '@app/common/kafka/kafka.service';
-import { KafkaAuctionViewedTopicValue } from '@app/common/schema/kafka-acution-viewed-topic.schema';
+import { KafkaAuctionViewedTopicValue } from '../../../../libs/common/src/schema/kafka-auction-viewed-topic.schema';
 import { KafkaProductViewedTopicValue } from '@app/common/schema/kafka-product-viewed-topic.schema';
 
 @Injectable()

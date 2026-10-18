@@ -3,7 +3,7 @@ import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { Batch, Consumer, KafkaMessage } from 'kafkajs';
 import { CreateAuctionBidderBatchUseCase } from '../../../application/port/in/create-auction-bidder-batch.use-case';
 import { KafkaDlqTopicValue } from '@app/common/schema/kafka-dlq-topic.schema';
-import { kafkaAuctionViewedTopicValueSchema } from '@app/common/schema/kafka-acution-viewed-topic.schema';
+import { kafkaAuctionViewedTopicValueSchema } from '../../../../../../../libs/common/src/schema/kafka-auction-viewed-topic.schema';
 import { AuctionViewedUseCase } from '../../../application/port/in/view-auction-batch.use-case';
 
 @Injectable()

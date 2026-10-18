@@ -1,5 +1,5 @@
-import { PrismaPaymentStore } from './payment.store';
-import { PaymentService } from './payment.service';
+import { PaymentPrismaAdapter } from './adapter/out/persistence/payment-prisma.adapter';
+import { PaymentService } from './application/service/payment.service';
 import { auctionUuid, buyerUuid, sellerUuid, fixture } from './payment.test-fixtures';
 
 describe('payment PostgreSQL transaction boundary', () => {
@@ -7,7 +7,10 @@ describe('payment PostgreSQL transaction boundary', () => {
     const f = fixture();
     let acquired = false;
     const tx = {
-      $queryRaw: vi.fn(async () => { acquired = true; return [{ auctionUuid }]; }),
+      $queryRaw: vi.fn(async () => {
+        acquired = true;
+        return [{ auctionUuid }];
+      }),
       auctions: {
         findUnique: vi.fn(async () => {
           if (!acquired) throw new Error('winner read before auction lock');
@@ -19,7 +22,7 @@ describe('payment PostgreSQL transaction boundary', () => {
       auctionPaymentAttempt: { upsert: vi.fn(async () => ({})) },
     };
     const prisma = { ...tx, $transaction: vi.fn(async (work: (client: typeof tx) => Promise<unknown>) => work(tx)) };
-    const repository = new PrismaPaymentStore(prisma as never);
+    const repository = new PaymentPrismaAdapter(prisma as never);
     const service = new PaymentService(repository, f.provider, f.config);
     return { repository, service, prisma, tx };
   }
@@ -32,11 +35,23 @@ describe('payment PostgreSQL transaction boundary', () => {
     const [sql, uuid] = tx.$queryRaw.mock.calls[0] as unknown as [TemplateStringsArray, string];
     expect(sql.join('?')).toMatch(/SELECT "auctionUuid" FROM "Auctions" WHERE "auctionUuid" = \?::uuid FOR UPDATE/);
     expect(uuid).toBe(auctionUuid);
-    expect(tx.auctions.update).toHaveBeenCalledWith({ where: { auctionUuid }, data: { checkoutLockedAt: expect.any(Date) } });
-    expect(tx.auctionPurchase.upsert).toHaveBeenCalledWith(expect.objectContaining({ create: expect.objectContaining({ amount: 27000n, buyerUuid: sellerUuid }) }));
-    expect(tx.auctionPaymentAttempt.upsert).toHaveBeenCalledWith(expect.objectContaining({ create: expect.objectContaining({
-      confirmIdempotencyKey: expect.any(String), cancelIdempotencyKey: expect.any(String), status: 'READY', attemptNumber: 1,
-    }) }));
+    expect(tx.auctions.update).toHaveBeenCalledWith({
+      where: { auctionUuid },
+      data: { checkoutLockedAt: expect.any(Date) },
+    });
+    expect(tx.auctionPurchase.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ create: expect.objectContaining({ amount: 27000n, buyerUuid: sellerUuid }) }),
+    );
+    expect(tx.auctionPaymentAttempt.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({
+          confirmIdempotencyKey: expect.any(String),
+          cancelIdempotencyKey: expect.any(String),
+          status: 'READY',
+          attemptNumber: 1,
+        }),
+      }),
+    );
   });
 
   it('does not freeze or create a purchase for a disappeared auction', async () => {

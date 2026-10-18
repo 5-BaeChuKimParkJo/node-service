@@ -1,5 +1,7 @@
 import { HttpStatus, Injectable } from '@nestjs/common';
-import { ErrorCode, toNumber, User } from '@app/common';
+import { ErrorCode } from '@app/common/common/const';
+import { toNumber } from '@app/common/utils/number.utils';
+import { User } from '@app/common/types/user';
 import { AppException } from '@app/common/common/app.exception';
 import * as TE from 'fp-ts/TaskEither';
 import * as F from 'fp-ts/function';
@@ -11,7 +13,7 @@ import { MyBidsOutput } from './schema/my-bids.schema';
 import { PrismaService } from '../prisma/prisma.service';
 import { BidAuctionBatchInput } from './schema/bidder.schema';
 import { AuctionEtcRepository } from './auction-etc.repository';
-import { TaxonomyService } from '../taxonomy/taxonomy.service';
+import { TaxonomyUseCase } from '../taxonomy/application/port/in/taxonomy.use-case';
 import { S3Service } from '@app/common/s3/s3.service';
 
 @Injectable()
@@ -20,7 +22,7 @@ export class AuctionEtcService {
     private readonly prisma: PrismaService,
     private readonly auctionEtcRepository: AuctionEtcRepository,
     private readonly auctionEtcFn: AuctionEtcFn,
-    private readonly taxonomyService: TaxonomyService,
+    private readonly taxonomyService: TaxonomyUseCase,
     private readonly s3Service: S3Service,
   ) {}
 

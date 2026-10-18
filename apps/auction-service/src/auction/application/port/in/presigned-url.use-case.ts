@@ -1,7 +1,7 @@
-import { User } from '@app/common';
-import { PresignedUrlCommand } from '../dto/presigned-url.command';
-import { PresignedUrlResponse } from '../dto/presigned-url.response';
+import { User } from '@app/common/types/user';
+import { PresignedUrlCommand } from '../../model/presigned-url.command';
+import { PresignedUrlResult } from '../../model/presigned-url.result';
 
 export abstract class PresignedUrlUseCase {
-  abstract execute: (command: PresignedUrlCommand, user: User) => Promise<PresignedUrlResponse>;
+  abstract execute: (command: PresignedUrlCommand, user: User) => Promise<PresignedUrlResult>;
 }

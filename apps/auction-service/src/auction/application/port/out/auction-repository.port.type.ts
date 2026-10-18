@@ -1,9 +1,8 @@
-import { Prisma } from 'apps/auction-service/src/prisma/generated';
-import AuctionAdminDomain from '../../../domain/model/auction-admin.domain';
-import AuctionBidderDomain from '../../../domain/model/auction-bidder.domain';
-import AuctionDomain from '../../../domain/model/auction.domain';
-import { AuctionAdminAction } from '../../../domain/model/auction-admin.domain';
-import { AuctionAdminBidsCursor } from '../dto/auction-admin-bids.command';
+import AdminAuction from '../../../domain/model/admin-auction';
+import AuctionBid from '../../../domain/model/auction-bid';
+import Auction from '../../../domain/model/auction';
+import { AuctionAdminAction } from '../../../domain/model/admin-auction';
+import { AuctionAdminBidsCursor } from '../../model/auction-admin-bids.command';
 
 export type AdminAuctionBidRecord = {
   auctionBidderUuid: string;
@@ -25,12 +24,12 @@ export type AuctionsArgs = {
 
 export type AuctionsReturn = {
   nextCursor: AuctionsArgs | null;
-  items: AuctionDomain[];
+  items: Auction[];
 };
 
 export type AuctionsAdminReturn = {
   nextCursor: AuctionsArgs | null;
-  items: AuctionAdminDomain[];
+  items: AdminAuction[];
 };
 
 export type AuctionBiddersReturn = {
@@ -38,10 +37,8 @@ export type AuctionBiddersReturn = {
     bidAmount: bigint;
     createdAt: Date;
   } | null;
-  items: AuctionBidderDomain[];
+  items: AuctionBid[];
 };
-
-export type Auctions = Prisma.AuctionsGetPayload<{}>;
 
 export type AdminAuctionActionArgs = {
   auctionUuid: string;

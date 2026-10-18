@@ -1,4 +1,4 @@
-import { CreateAuctionBidderBatchCommand } from '../dto/create-auction-bidder-batch.command';
+import { CreateAuctionBidderBatchCommand } from '../../model/create-auction-bidder-batch.command';
 
 export abstract class CreateAuctionBidderBatchUseCase {
   abstract execute: (commands: CreateAuctionBidderBatchCommand[]) => Promise<void>;

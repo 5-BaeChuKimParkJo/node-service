@@ -4,7 +4,7 @@ import { HttpAuction, HttpAuctionSchema, HttpMember, HttpMemberSchema } from '..
 import axios from 'axios';
 import { ConfigService } from '@nestjs/config';
 import { EnvSchema } from '../common/env-schema';
-import { ErrorCode } from '@app/common';
+import { ErrorCode } from '@app/common/common/const';
 import * as TE from 'fp-ts/TaskEither';
 import * as F from 'fp-ts/function';
 import * as E from 'fp-ts/Either';

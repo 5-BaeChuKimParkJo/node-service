@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { NotificationRepository } from './notification.repository';
 import { NotificationsInput, NotificationsOutput } from './schema/notifications.schema';
-import { User } from '@app/common';
+import { User } from '@app/common/types/user';
 
 @Injectable()
 export class NotificationService {

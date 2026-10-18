@@ -2,12 +2,12 @@ import {
   CheckFileExistsArgs,
   GetObjectReturn,
   PresignedUrlArgs,
-  PrisignedUrlReturn,
+  PresignedUrlResult,
   PutObjectArgs,
 } from './auction-file-storage-port.types';
 
 export abstract class AuctionFileStoragePort {
-  abstract presignedUrl: (args: PresignedUrlArgs) => Promise<PrisignedUrlReturn>;
+  abstract presignedUrl: (args: PresignedUrlArgs) => Promise<PresignedUrlResult>;
 
   abstract checkFileExists: (args: CheckFileExistsArgs) => Promise<void>;
 
