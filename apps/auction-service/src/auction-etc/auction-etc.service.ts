@@ -124,7 +124,7 @@ export class AuctionEtcService {
         A.map((bidder) => bidder.auctionUuid),
         A.uniq(Str.Eq),
       );
-      const auctions = await this.auctionEtcRepository.findAcutionsForUpdate(auctionUuids, tx);
+      const auctions = await this.auctionEtcRepository.findAuctionsForUpdate(auctionUuids, tx);
       const biddersByAuctionUuid = F.pipe(
         input,
         NEA.groupBy((bidder) => bidder.auctionUuid),

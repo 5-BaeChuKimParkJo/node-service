@@ -55,7 +55,7 @@ describe('AuctionEtcService', () => {
         {
           provide: AuctionEtcRepository,
           useValue: {
-            findAcutionsForUpdate: vitest.fn(),
+            findAuctionsForUpdate: vitest.fn(),
             createAuctionOutbox: vitest.fn(),
           },
         },
@@ -92,7 +92,7 @@ describe('AuctionEtcService', () => {
       const auctionFn = module.get(AuctionEtcFn);
       const auctionEtcRepository = module.get(AuctionEtcRepository);
 
-      (auctionEtcRepository.findAcutionsForUpdate as Mock).mockImplementation(
+      (auctionEtcRepository.findAuctionsForUpdate as Mock).mockImplementation(
         () =>
           [
             {
@@ -159,7 +159,7 @@ describe('AuctionEtcService', () => {
       const auctionFn = module.get(AuctionEtcFn);
       const auctionEtcRepository = module.get(AuctionEtcRepository);
 
-      (auctionEtcRepository.findAcutionsForUpdate as Mock).mockImplementation(
+      (auctionEtcRepository.findAuctionsForUpdate as Mock).mockImplementation(
         () =>
           [
             {
@@ -216,7 +216,7 @@ describe('AuctionEtcService', () => {
       const auctionFn = module.get(AuctionEtcFn);
       const auctionEtcRepository = module.get(AuctionEtcRepository);
 
-      (auctionEtcRepository.findAcutionsForUpdate as Mock).mockImplementation(
+      (auctionEtcRepository.findAuctionsForUpdate as Mock).mockImplementation(
         () =>
           [
             {
@@ -273,7 +273,7 @@ describe('AuctionEtcService', () => {
       const auctionFn = module.get(AuctionEtcFn);
       const auctionEtcRepository = module.get(AuctionEtcRepository);
 
-      (auctionEtcRepository.findAcutionsForUpdate as Mock).mockImplementation(
+      (auctionEtcRepository.findAuctionsForUpdate as Mock).mockImplementation(
         () =>
           [
             {
@@ -330,7 +330,7 @@ describe('AuctionEtcService', () => {
       const auctionFn = module.get(AuctionEtcFn);
       const auctionEtcRepository = module.get(AuctionEtcRepository);
 
-      (auctionEtcRepository.findAcutionsForUpdate as Mock).mockImplementation(
+      (auctionEtcRepository.findAuctionsForUpdate as Mock).mockImplementation(
         () =>
           [
             {
@@ -387,7 +387,7 @@ describe('AuctionEtcService', () => {
       const auctionFn = module.get(AuctionEtcFn);
       const auctionEtcRepository = module.get(AuctionEtcRepository);
 
-      (auctionEtcRepository.findAcutionsForUpdate as Mock).mockImplementation(
+      (auctionEtcRepository.findAuctionsForUpdate as Mock).mockImplementation(
         () =>
           [
             {
@@ -444,7 +444,7 @@ describe('AuctionEtcService', () => {
       const auctionFn = module.get(AuctionEtcFn);
       const auctionEtcRepository = module.get(AuctionEtcRepository);
 
-      (auctionEtcRepository.findAcutionsForUpdate as Mock).mockImplementation(
+      (auctionEtcRepository.findAuctionsForUpdate as Mock).mockImplementation(
         () =>
           [
             {
@@ -501,7 +501,7 @@ describe('AuctionEtcService', () => {
       const auctionFn = module.get(AuctionEtcFn);
       const auctionEtcRepository = module.get(AuctionEtcRepository);
 
-      (auctionEtcRepository.findAcutionsForUpdate as Mock).mockImplementation(
+      (auctionEtcRepository.findAuctionsForUpdate as Mock).mockImplementation(
         () =>
           [
             {
@@ -568,7 +568,7 @@ describe('AuctionEtcService', () => {
       const auctionFn = module.get(AuctionEtcFn);
       const auctionEtcRepository = module.get(AuctionEtcRepository);
 
-      (auctionEtcRepository.findAcutionsForUpdate as Mock).mockImplementation(
+      (auctionEtcRepository.findAuctionsForUpdate as Mock).mockImplementation(
         () =>
           [
             {
@@ -625,7 +625,7 @@ describe('AuctionEtcService', () => {
       const auctionFn = module.get(AuctionEtcFn);
       const auctionEtcRepository = module.get(AuctionEtcRepository);
 
-      (auctionEtcRepository.findAcutionsForUpdate as Mock).mockImplementation(
+      (auctionEtcRepository.findAuctionsForUpdate as Mock).mockImplementation(
         () =>
           [
             {
@@ -682,7 +682,7 @@ describe('AuctionEtcService', () => {
       const auctionFn = module.get(AuctionEtcFn);
       const auctionEtcRepository = module.get(AuctionEtcRepository);
 
-      (auctionEtcRepository.findAcutionsForUpdate as Mock).mockImplementation(
+      (auctionEtcRepository.findAuctionsForUpdate as Mock).mockImplementation(
         () =>
           [
             {
@@ -739,7 +739,7 @@ describe('AuctionEtcService', () => {
       const auctionFn = module.get(AuctionEtcFn);
       const auctionEtcRepository = module.get(AuctionEtcRepository);
 
-      (auctionEtcRepository.findAcutionsForUpdate as Mock).mockImplementation(
+      (auctionEtcRepository.findAuctionsForUpdate as Mock).mockImplementation(
         () =>
           [
             {
@@ -796,7 +796,7 @@ describe('AuctionEtcService', () => {
       const auctionFn = module.get(AuctionEtcFn);
       const auctionEtcRepository = module.get(AuctionEtcRepository);
 
-      (auctionEtcRepository.findAcutionsForUpdate as Mock).mockImplementation(
+      (auctionEtcRepository.findAuctionsForUpdate as Mock).mockImplementation(
         () =>
           [
             {
@@ -853,7 +853,7 @@ describe('AuctionEtcService', () => {
       const auctionFn = module.get(AuctionEtcFn);
       const auctionEtcRepository = module.get(AuctionEtcRepository);
 
-      (auctionEtcRepository.findAcutionsForUpdate as Mock).mockImplementation(
+      (auctionEtcRepository.findAuctionsForUpdate as Mock).mockImplementation(
         () =>
           [
             {
@@ -910,7 +910,7 @@ describe('AuctionEtcService', () => {
       const auctionFn = module.get(AuctionEtcFn);
       const auctionEtcRepository = module.get(AuctionEtcRepository);
 
-      (auctionEtcRepository.findAcutionsForUpdate as Mock).mockImplementation(
+      (auctionEtcRepository.findAuctionsForUpdate as Mock).mockImplementation(
         () =>
           [
             {
@@ -967,7 +967,7 @@ describe('AuctionEtcService', () => {
       const auctionFn = module.get(AuctionEtcFn);
       const auctionEtcRepository = module.get(AuctionEtcRepository);
 
-      (auctionEtcRepository.findAcutionsForUpdate as Mock).mockImplementation(
+      (auctionEtcRepository.findAuctionsForUpdate as Mock).mockImplementation(
         () =>
           [
             {
@@ -1014,7 +1014,7 @@ describe('AuctionEtcService', () => {
       const auctionFn = module.get(AuctionEtcFn);
       const auctionEtcRepository = module.get(AuctionEtcRepository);
 
-      (auctionEtcRepository.findAcutionsForUpdate as Mock).mockImplementation(
+      (auctionEtcRepository.findAuctionsForUpdate as Mock).mockImplementation(
         () =>
           [
             {
@@ -1163,7 +1163,7 @@ describe('AuctionEtcService', () => {
       const auctionFn = module.get(AuctionEtcFn);
       const auctionEtcRepository = module.get(AuctionEtcRepository);
 
-      (auctionEtcRepository.findAcutionsForUpdate as Mock).mockImplementation(
+      (auctionEtcRepository.findAuctionsForUpdate as Mock).mockImplementation(
         () =>
           [
             {

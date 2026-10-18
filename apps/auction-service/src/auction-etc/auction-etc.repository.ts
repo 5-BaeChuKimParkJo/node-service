@@ -71,7 +71,7 @@ export class AuctionEtcRepository {
     );
   };
 
-  findAcutionsForUpdate = async (
+  findAuctionsForUpdate = async (
     auctionUuids: string[],
     tx?: Prisma.TransactionClient,
   ): Promise<Prisma.AuctionsGetPayload<{}>[]> => {
