@@ -1,0 +1,4 @@
+{
+  "valid": ["fix(profile): preserve custom images", "build(gitops): update auction image", "refactor(account)!: replace an approved contract", "ci(tooling): enforce shared checks"],
+  "invalid": [":bug: fix(profile): preserve custom images", "fix: no scope", "fix(Profile): uppercase scope", "fix(profile): ", "hotfix(profile): unsupported type", "fix(profile): x\nsecond header", "fix(profile): tabs\there"]
+}

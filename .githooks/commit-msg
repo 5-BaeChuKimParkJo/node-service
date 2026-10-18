@@ -1,0 +1,7 @@
+#!/bin/sh
+set -eu
+python_path="$(git config --local --get chalnak.python || true)"
+if [ -z "$python_path" ]; then
+  python_path=python3
+fi
+exec "$python_path" scripts/check_conventions.py commit --message-file "$1"
