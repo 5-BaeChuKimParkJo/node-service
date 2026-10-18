@@ -8,6 +8,27 @@ describe('winner checkout state machine', () => {
     expect(store.state.auction.checkoutLockedAt).toBeNull();
   });
 
+  it('does not query Toss before an authenticated payment key has been received', async () => {
+    const { service, provider } = fixture();
+    const lookup = vi.spyOn(provider, 'lookup');
+    const orderId = (await service.prepare(auctionUuid, buyerUuid)).purchase!.attempt!.orderId;
+    const result = await service.reconcile(auctionUuid, buyerUuid);
+    await service.webhook({ data: { orderId, paymentKey: 'untrusted-webhook-key', status: 'DONE' } });
+    expect(result.purchase!.attempt!.status).toBe('READY');
+    expect(lookup).not.toHaveBeenCalled();
+    expect(provider.confirms).toHaveLength(0);
+  });
+
+  it('reconciles using the persisted payment key rather than the order ID', async () => {
+    const { service, provider } = fixture();
+    const orderId = (await service.prepare(auctionUuid, buyerUuid)).purchase!.attempt!.orderId;
+    provider.loseConfirm = true;
+    const lookup = vi.spyOn(provider, 'lookup');
+    const result = await service.confirm(auctionUuid, buyerUuid, { orderId, paymentKey: 'stored-pk', amount: '15000' });
+    expect(result.purchase!.status).toBe('PAID');
+    expect(lookup).toHaveBeenCalledWith('stored-pk');
+  });
+
   it.each([sellerUuid, '40000000-0000-4000-8000-000000000004'])(
     'rejects non-owner %s on GET and prepare',
     async (user) => {
@@ -125,8 +146,9 @@ describe('winner checkout state machine', () => {
   );
 
   it('keeps virtual accounts pending until verified DONE', async () => {
-    const { service, provider } = fixture();
+    const { service, provider, store } = fixture();
     const orderId = (await service.prepare(auctionUuid, buyerUuid)).purchase!.attempt!.orderId;
+    store.state.purchase!.attempts[0].paymentKey = 'pk';
     provider.payment = {
       orderId,
       paymentKey: 'pk',
@@ -144,6 +166,7 @@ describe('winner checkout state machine', () => {
   it.each(['ABORTED', 'EXPIRED'])('only replaces a verified terminal %s attempt', async (status) => {
     const { service, provider, store } = fixture();
     const orderId = (await service.prepare(auctionUuid, buyerUuid)).purchase!.attempt!.orderId;
+    store.state.purchase!.attempts[0].paymentKey = 'pk';
     provider.payment = { orderId, paymentKey: 'pk', totalAmount: 15000, balanceAmount: 15000, currency: 'KRW', status };
     await service.reconcile(auctionUuid, buyerUuid);
     expect((await service.prepare(auctionUuid, buyerUuid)).purchase!.attempt!.orderId).not.toBe(orderId);

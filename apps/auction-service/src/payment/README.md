@@ -67,7 +67,12 @@ Only verified DONE with matching order, payment key, exact amount, KRW currency,
 full balance, and a valid approval date marks PAID. Virtual accounts stay pending.
 Provider response bodies and payment keys are not returned to clients or logged.
 
-Owner/admin reconcile first queries the known order. Following the agreed contract
+Owner/admin reconcile first queries the persisted payment key. Widget (`gsk`)
+keys support `GET /v1/payments/{paymentKey}`, not order-number lookup. Until an
+authenticated confirm request has persisted a payment key, reconcile is a local
+read and webhooks do not obtain or trust a key from their payload. A READY order
+without a key remains reusable; it must not become UNKNOWN after a provider query.
+Following the agreed contract
 extension, an explicit reconcile may also resume a previously persisted action:
 confirm only after a missing/READY/IN_PROGRESS lookup; cancel only after a
 DONE/WAITING_FOR_DEPOSIT lookup. Replay uses the exact stored payment key, amount,

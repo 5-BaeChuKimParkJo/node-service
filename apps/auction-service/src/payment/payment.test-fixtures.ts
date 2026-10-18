@@ -72,7 +72,7 @@ export class FakePaymentProvider extends PaymentProviderPort {
     if (this.loseConfirm) throw new Error('lost response');
     return this.payment;
   }
-  async lookup(_orderId: string) {
+  async lookup(_paymentKey: string) {
     if (this.queryError) throw new Error('query unavailable');
     return this.payment;
   }

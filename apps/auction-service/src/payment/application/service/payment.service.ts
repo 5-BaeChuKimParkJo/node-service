@@ -313,7 +313,11 @@ export class PaymentService {
 
   private async query(auctionUuid: string, orderId: string): Promise<ProviderAction['kind'] | null> {
     try {
-      const payment = await this.provider.lookup(orderId);
+      const state = await this.store.read(auctionUuid);
+      const attempt = state.purchase?.attempts.find((item) => item.orderId === orderId);
+      // Widget secret keys support paymentKey lookup, not order-number lookup.
+      if (!attempt?.paymentKey) return null;
+      const payment = await this.provider.lookup(attempt.paymentKey);
       if (payment) await this.apply(auctionUuid, orderId, payment);
       if (!payment || ['READY', 'IN_PROGRESS'].includes(payment.status)) return 'confirm';
       if (['DONE', 'WAITING_FOR_DEPOSIT'].includes(payment.status)) return 'cancel';

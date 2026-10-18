@@ -58,8 +58,8 @@ export class TossPaymentAdapter extends PaymentProviderPort {
   async confirm(orderId: string, paymentKey: string, amount: number, key: string): Promise<PaymentProviderResult> {
     return (await this.request('/payments/confirm', { orderId, paymentKey, amount }, key))!;
   }
-  lookup(orderId: string) {
-    return this.request(`/payments/orders/${encodeURIComponent(orderId)}`);
+  lookup(paymentKey: string) {
+    return this.request(`/payments/${encodeURIComponent(paymentKey)}`);
   }
   async cancel(paymentKey: string, reason: string, key: string): Promise<PaymentProviderResult> {
     return (await this.request(`/payments/${encodeURIComponent(paymentKey)}/cancel`, { cancelReason: reason }, key))!;

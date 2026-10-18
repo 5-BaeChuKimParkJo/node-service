@@ -69,6 +69,19 @@ describe('test-only payment configuration and transport', () => {
     expect(fetcher).not.toHaveBeenCalled();
   });
 
+  it('looks up by encoded paymentKey using the endpoint supported by widget secret keys', async () => {
+    const fetcher = vi.fn().mockResolvedValue(new Response('{"code":"NOT_FOUND_PAYMENT"}', { status: 404 }));
+    vi.stubGlobal('fetch', fetcher);
+    const provider = new TossPaymentAdapter(
+      new ConfigService({ TOSS_PAYMENTS_ENABLED: true, TOSS_SECRET_KEY: 'test_gsk_fixture' }),
+    );
+    expect(await provider.lookup('payment/key')).toBeNull();
+    expect(fetcher).toHaveBeenCalledWith(
+      'https://api.tosspayments.com/v1/payments/payment%2Fkey',
+      expect.objectContaining({ method: 'GET', redirect: 'error' }),
+    );
+  });
+
   it('treats only NOT_FOUND_PAYMENT as a missing query and sanitizes transport errors', async () => {
     const fetcher = vi
       .fn()

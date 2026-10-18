@@ -17,6 +17,6 @@ export class PaymentProviderUnavailable extends Error {
 
 export abstract class PaymentProviderPort {
   abstract confirm(orderId: string, paymentKey: string, amount: number, key: string): Promise<PaymentProviderResult>;
-  abstract lookup(orderId: string): Promise<PaymentProviderResult | null>;
+  abstract lookup(paymentKey: string): Promise<PaymentProviderResult | null>;
   abstract cancel(paymentKey: string, reason: string, key: string): Promise<PaymentProviderResult>;
 }
