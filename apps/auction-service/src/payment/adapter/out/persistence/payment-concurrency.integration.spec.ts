@@ -6,6 +6,8 @@ import { AuctionPrismaAdapter } from '../../../../auction/adapter/out/postgresql
 import NewBid from '../../../../auction/domain/model/new-bid';
 import { PaymentService } from '../../../application/service/payment.service';
 import { PaymentPrismaAdapter } from './payment-prisma.adapter';
+import { PaymentAdminPrismaAdapter } from './payment-admin-prisma.adapter';
+import { PaymentAdminService } from '../../../application/service/payment-admin.service';
 import { FakePaymentProvider, buyerUuid, sellerUuid } from '../../../payment.test-fixtures';
 import { requireTestDatabaseUrl } from '../../../../../../../scripts/test-database.mjs';
 
@@ -75,6 +77,56 @@ describe.skipIf(!url)('payment concurrency on isolated PostgreSQL', () => {
     expect(new Set(views.map((view) => view.purchase!.attempt!.orderId)).size).toBe(1);
     expect(await database.auctionPurchase.count({ where: { auctionUuid: uuid } })).toBe(1);
     expect((await store.read(uuid)).purchase!.attempts).toHaveLength(1);
+  });
+
+  it('lists persisted orders with literal search, latest attempt and lossless microsecond boundaries', async () => {
+    const prepared = await service.prepare(uuid, buyerUuid);
+    const purchaseUuid = prepared.purchase!.purchaseUuid;
+    const firstOrder = prepared.purchase!.attempt!.orderId;
+    const title = `Literal%_\\ listing ${uuid}`;
+    await database.auctionPurchase.update({
+      where: { purchaseUuid },
+      data: { orderName: title, amount: 9007199254740993n, status: 'PAID' },
+    });
+    await database.$executeRaw`
+      UPDATE "AuctionPurchase" SET "createdAt" = '2026-10-18T14:00:00.123456Z'::timestamptz
+      WHERE "purchaseUuid" = ${purchaseUuid}::uuid`;
+    await database.auctionPaymentAttempt.create({
+      data: {
+        orderId: `latest_${randomUUID()}`,
+        purchaseUuid,
+        attemptNumber: 2,
+        status: 'DONE',
+        method: 'CARD',
+        confirmIdempotencyKey: randomUUID(),
+        cancelIdempotencyKey: randomUUID(),
+      },
+    });
+    const query = new PaymentAdminService(new PaymentAdminPrismaAdapter(database as PrismaService));
+    const result = await query.list({
+      query: uuid,
+      status: 'PAID',
+      from: '2026-10-18T14:00:00.123456Z',
+      to: '2026-10-18T14:00:00.123457Z',
+    });
+    expect(result.items).toHaveLength(1);
+    expect(result.items[0]).toMatchObject({
+      purchaseUuid,
+      orderName: title,
+      amount: '9007199254740993',
+      createdAt: '2026-10-18T14:00:00.123456Z',
+      attempt: { status: 'DONE', method: 'CARD' },
+    });
+    expect(result.items[0].attempt!.orderId).not.toBe(firstOrder);
+    expect((await query.list({ query: firstOrder })).items[0].purchaseUuid).toBe(purchaseUuid);
+    expect((await query.list({ query: `%_\\ listing ${uuid}` })).items).toHaveLength(1);
+    expect((await query.list({ query: `wrong%${uuid}` })).items).toHaveLength(0);
+    expect((await query.list({ query: uuid, status: 'CANCELED' })).items).toHaveLength(0);
+    expect((await query.list({ query: uuid, to: '2026-10-18T14:00:00.123456Z' })).items).toHaveLength(0);
+    expect(
+      (await query.list({ query: uuid, cursor: { createdAt: '2026-10-18T14:00:00.123456Z', purchaseUuid } })).items,
+    ).toHaveLength(0);
+    expect(JSON.stringify(result)).not.toMatch(/customerKey|paymentKey|Idempotency|operationLease/);
   });
 
   it('rejects a bid that waits on the checkout row lock', async () => {

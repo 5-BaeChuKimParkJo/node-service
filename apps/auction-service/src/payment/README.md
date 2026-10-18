@@ -60,6 +60,14 @@ auctions with no winner, receive 403. Missing auctions receive 404.
 
 ## Recovery and cancellation
 
+Administrator order listing uses `GET /internal/admin/payments` with the same
+internal-token guard. Optional filters are `query` (literal substring of frozen
+order name or any attempt order ID), purchase `status`, and UTC creation-time
+`from` (inclusive) / `to` (exclusive). Pagination pairs `createdAt` with
+`purchaseUuid`, preserves PostgreSQL microseconds, and returns at most 20 items
+with a `nextCursor`. The response includes the latest attempt only; it never
+exposes payment/customer/idempotency keys and never calls Toss or mutates orders.
+
 Prepare reuses the existing attempt; only verified ABORTED/EXPIRED attempts may
 be replaced. Hidden/deleted/canceled auctions are checked again on every prepare.
 UNKNOWN, CONFIRMING, WAITING_FOR_DEPOSIT and CANCELING must not offer a new charge.
