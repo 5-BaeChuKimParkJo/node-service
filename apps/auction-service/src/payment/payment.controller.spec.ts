@@ -156,6 +156,29 @@ describe('payment HTTP authorization and DTO contract', () => {
     }
   });
 
+  it('returns cancellation operator metadata through the internal API but never the buyer API', async () => {
+    const orderId = (await f.service.prepare(auctionUuid, buyerUuid)).purchase!.attempt!.orderId;
+    await f.service.confirm(auctionUuid, buyerUuid, { orderId, paymentKey: 'pk', amount: '15000' });
+    await f.service.cancel(auctionUuid, 'operator', 'Customer requested');
+    const internal = await app.inject({ method: 'GET', url: adminPath, headers: admin });
+    expect(internal.statusCode).toBe(200);
+    expect(internal.json().cancellationHistory).toEqual([
+      {
+        orderId,
+        actor: 'operator',
+        reason: 'Customer requested',
+        requestedAt: expect.any(String),
+        amount: '15000',
+        status: 'CANCELED',
+        errorCode: null,
+      },
+    ]);
+    const buyer = await app.inject({ method: 'GET', url: path, headers: auth() });
+    expect(buyer.statusCode).toBe(200);
+    expect(buyer.json()).not.toHaveProperty('cancellationHistory');
+    expect(JSON.stringify(internal.json())).not.toContain('paymentKey');
+  });
+
   it('accepts unsigned webhooks without trusting their claimed state', async () => {
     const orderId = (await f.service.prepare(auctionUuid, buyerUuid)).purchase!.attempt!.orderId;
     const result = await app.inject({

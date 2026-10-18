@@ -73,6 +73,25 @@ export class PaymentService {
       eligible,
       reason: memberUuid ? reason : null,
       clientKey: eligible ? (this.config.get<string>('TOSS_CLIENT_KEY') ?? null) : null,
+      ...(!memberUuid
+        ? {
+            cancellationHistory: (p?.attempts ?? []).flatMap((attempt) =>
+              attempt.cancelRequestedAt
+                ? [
+                    {
+                      orderId: attempt.orderId,
+                      actor: attempt.cancelActor,
+                      reason: attempt.cancelReason,
+                      requestedAt: attempt.cancelRequestedAt.toISOString(),
+                      amount: p!.amount.toString(),
+                      status: attempt.status,
+                      errorCode: attempt.errorCode,
+                    },
+                  ]
+                : [],
+            ),
+          }
+        : {}),
       purchase: p
         ? {
             purchaseUuid: p.purchaseUuid,

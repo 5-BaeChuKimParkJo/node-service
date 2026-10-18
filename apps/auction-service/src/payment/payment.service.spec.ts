@@ -1,6 +1,48 @@
 import { fixture, auctionUuid, buyerUuid, sellerUuid } from './payment.test-fixtures';
 
 describe('winner checkout state machine', () => {
+  it('exposes stored cancellation history only to administrators and preserves the first actor on retries', async () => {
+    const { service, store } = fixture();
+    expect(await service.get(auctionUuid)).toMatchObject({ cancellationHistory: [] });
+    const orderId = (await service.prepare(auctionUuid, buyerUuid)).purchase!.attempt!.orderId;
+    await service.confirm(auctionUuid, buyerUuid, { orderId, paymentKey: 'pk', amount: '15000' });
+    const result = await service.cancel(auctionUuid, ' operator ', ' Customer requested ');
+    const requestedAt = store.state.purchase!.attempts[0].cancelRequestedAt!.toISOString();
+    expect(result).toMatchObject({
+      cancellationHistory: [
+        {
+          orderId,
+          actor: 'operator',
+          reason: 'Customer requested',
+          requestedAt,
+          amount: '15000',
+          status: 'CANCELED',
+          errorCode: null,
+        },
+      ],
+    });
+    await service.cancel(auctionUuid, 'another-operator', 'Changed reason');
+    const history = (await service.get(auctionUuid)).cancellationHistory;
+    expect(history).toEqual(result.cancellationHistory);
+    expect(history).toHaveLength(1);
+    expect(JSON.stringify(history)).not.toMatch(/paymentKey|Idempotency|operationLease/);
+    expect(await service.get(auctionUuid, buyerUuid)).not.toHaveProperty('cancellationHistory');
+  });
+
+  it('keeps an uncertain cancellation in history until provider reconciliation confirms it', async () => {
+    const { service, provider } = fixture();
+    const orderId = (await service.prepare(auctionUuid, buyerUuid)).purchase!.attempt!.orderId;
+    await service.confirm(auctionUuid, buyerUuid, { orderId, paymentKey: 'pk', amount: '15000' });
+    provider.loseCancel = true;
+    provider.queryError = true;
+    const result = await service.cancel(auctionUuid, 'operator', 'Customer requested');
+    expect(result).toMatchObject({ cancellationHistory: [{ status: 'CANCELING', actor: 'operator' }] });
+    provider.queryError = false;
+    const reconciled = await service.reconcile(auctionUuid);
+    expect(reconciled).toMatchObject({ cancellationHistory: [{ status: 'CANCELED', actor: 'operator' }] });
+    expect(reconciled.cancellationHistory?.[0].requestedAt).toBe(result.cancellationHistory?.[0].requestedAt);
+  });
+
   it('GET returns eligibility without creating a purchase or freezing the auction', async () => {
     const { service, store } = fixture();
     expect(await service.get(auctionUuid, buyerUuid)).toMatchObject({ eligible: true, purchase: null });
