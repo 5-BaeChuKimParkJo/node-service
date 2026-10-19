@@ -17,17 +17,27 @@ const comparableTimestamp = (value: string) => {
 
 const listRequest = z
   .object({
+    includeUnstarted: z
+      .enum(['true', 'false'])
+      .transform((value) => value === 'true')
+      .optional(),
     query: z.string().trim().max(100).optional(),
-    status: z.enum(['AWAITING_PAYMENT', 'PAID', 'CANCELED']).optional(),
+    status: z.enum(['NOT_STARTED', 'AWAITING_PAYMENT', 'PAID', 'CANCELED']).optional(),
     attention: z.enum(['WAITING', 'DUE_SOON', 'OVERDUE', 'REVIEW_REQUIRED']).optional(),
     from: utcTimestamp.optional(),
     to: utcTimestamp.optional(),
     createdAt: utcTimestamp.optional(),
     purchaseUuid: z.string().uuid().optional(),
+    auctionUuid: z.string().uuid().optional(),
   })
-  .refine((value) => (value.createdAt !== undefined) === (value.purchaseUuid !== undefined), {
-    message: 'createdAt and purchaseUuid must be provided together',
-  })
+  .refine(
+    (value) =>
+      (value.createdAt !== undefined) === (value.purchaseUuid !== undefined || value.auctionUuid !== undefined) &&
+      !(value.purchaseUuid !== undefined && value.auctionUuid !== undefined),
+    {
+      message: 'createdAt and exactly one cursor ID must be provided together',
+    },
+  )
   .refine((value) => !value.from || !value.to || comparableTimestamp(value.from) < comparableTimestamp(value.to), {
     message: 'from must precede to',
   });
@@ -39,10 +49,14 @@ export class PaymentAdminController {
 
   @Get()
   list(@Query() request: unknown) {
-    const { createdAt, purchaseUuid, ...filters } = listRequest.parse(request);
+    const { createdAt, purchaseUuid, auctionUuid, ...filters } = listRequest.parse(request);
     return this.payments.list({
       ...filters,
-      cursor: createdAt && purchaseUuid ? { createdAt, purchaseUuid } : undefined,
+      cursor: createdAt
+        ? purchaseUuid
+          ? { createdAt, purchaseUuid }
+          : { createdAt, auctionUuid: auctionUuid! }
+        : undefined,
     });
   }
 }

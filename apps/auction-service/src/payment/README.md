@@ -84,8 +84,21 @@ enforced customer payment cutoff:
   CANCELING or WAITING_FOR_DEPOSIT is `REVIEW_REQUIRED` before deadline checks,
   even when the purchase is PAID (for example, uncertain cancellation). Settled
   paid purchases without those conditions are `NONE`.
-- Only already-created purchase orders are covered. Winners who never opened
-  checkout are not included. Search/date filters retain their existing meaning.
+- With `includeUnstarted=true`, eligible ended auctions without a purchase are included as `NOT_STARTED`,
+  with `purchaseUuid: null`, no attempt, the current winner/amount/title, and
+  auction end time as `createdAt`. Hidden, canceled, deleted, sold, ongoing,
+  self-winning, missing-winner and invalid-amount auctions are excluded from
+  this additional projection. Existing purchases keep their frozen values
+  and remain visible regardless of later auction visibility changes.
+  Omitting the option or using `false` retains purchase-only results for legacy
+  callers. The HTTP option accepts only the literal strings `true` and `false`.
+- Date filters use purchase creation time for orders and auction end time for
+  unstarted wins. Deadlines always use auction end time plus the server policy.
+  Pages sort by that list timestamp and auction UUID (both descending), keeping
+  microseconds. Existing `{createdAt,purchaseUuid}` cursors resolve the auction
+  UUID; unstarted rows use `{createdAt,auctionUuid}`. Exactly one ID is required.
+  A checkout creates a real purchase only in the customer workflow; refresh
+  the mutable list to see a win that moved across a pagination boundary.
 - This read path never reconciles, cancels, blocks a charge, changes financial
   state or schedules work. Changing the policy recomputes historical labels; it
   does not rewrite deadlines or payment attempts in the database. Use the existing
@@ -159,11 +172,12 @@ $env:TEST_DATABASE_URL = 'postgresql://test:test@127.0.0.1:5432/auction_test'
 npm run test:payment:integration
 ```
 
-The 16 database cases cover simultaneous prepares, checkout-versus-bid row
+The 19 database cases cover simultaneous prepares, checkout-versus-bid row
 contention, order-list pagination, duplicate confirmations, expired leases,
 rollback of bid/outbox writes, and advisory deadline boundaries with unresolved
 payment precedence. Filtered pagination also covers 44 interleaved purchases
-with tied creation timestamps and the original reason after repeated cancellation.
+with tied creation timestamps, mixed unstarted/order pagination, winner eligibility,
+checkout projection transitions, and the original reason after repeated cancellation.
 Seven of these cases exercise the actual
 HTTP controllers, authentication, application service and Prisma adapter:
 
@@ -179,7 +193,7 @@ HTTP controllers, authentication, application service and Prisma adapter:
 Only the external provider is replaced with a deterministic test double. These
 tests never call Toss and do not prove provider-side idempotency or real network
 failure behavior. Fixtures use unique auction IDs and delete only their own
-rows. Unit-only runs visibly skip all 16 cases without an explicit test database.
+rows. Unit-only runs visibly skip all 19 cases without an explicit test database.
 Node Quality provisions PostgreSQL in CI and runs both suites before any service
 image can be published.
 

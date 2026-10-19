@@ -2,6 +2,11 @@ import { PrismaService } from '../../../../prisma/prisma.service';
 import { PaymentAdminPrismaAdapter } from './payment-admin-prisma.adapter';
 
 describe('PaymentAdminPrismaAdapter SQL boundary', () => {
+  it.each([undefined, false, true])('explicitly opts into unstarted wins: %s', async (includeUnstarted) => {
+    const { adapter, queryRaw } = setup();
+    await adapter.find({ includeUnstarted });
+    expect(queryRaw.mock.calls[0][0].values).toContain(includeUnstarted ?? false);
+  });
   const setup = () => {
     const queryRaw = vi.fn().mockResolvedValue([]);
     return { queryRaw, adapter: new PaymentAdminPrismaAdapter({ $queryRaw: queryRaw } as unknown as PrismaService) };
@@ -33,7 +38,7 @@ describe('PaymentAdminPrismaAdapter SQL boundary', () => {
     expect(sql.text).toContain('LEFT JOIN LATERAL');
     expect(sql.text).toContain('ORDER BY a."attemptNumber" DESC');
     expect(sql.text).toContain('LIMIT 1');
-    expect(sql.text).toContain('ORDER BY p."createdAt" DESC, p."purchaseUuid" DESC');
+    expect(sql.text).toContain('ORDER BY p."createdAt" DESC, p."auctionUuid" DESC');
     expect(sql.text).toContain('LIMIT 21');
     expect(sql.text).toContain('SS.US');
     expect(sql.text).toContain("AT TIME ZONE 'UTC'");
@@ -70,6 +75,7 @@ describe('PaymentAdminPrismaAdapter SQL boundary', () => {
     expect(sql.text).toContain('strpos(lower(search."orderId"), lower(');
     expect(sql.text).toMatch(/p\."createdAt" >= \$\d+::timestamptz/);
     expect(sql.text).toMatch(/p\."createdAt" < \$\d+::timestamptz/);
-    expect(sql.text).toMatch(/\(p\."createdAt", p\."purchaseUuid"\) < \(\$\d+::timestamptz, \$\d+::uuid\)/);
+    expect(sql.text).toMatch(/\(p\."createdAt", p\."auctionUuid"\) < /);
+    expect(sql.text).toMatch(/WHERE "purchaseUuid" = \$\d+::uuid/);
   });
 });

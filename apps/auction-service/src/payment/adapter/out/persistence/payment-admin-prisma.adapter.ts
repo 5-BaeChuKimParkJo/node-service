@@ -11,7 +11,7 @@ export class PaymentAdminPrismaAdapter extends PaymentAdminQueryPort {
   }
 
   find(
-    { query, status, attention, from, to, cursor }: PaymentAdminListCommand,
+    { query, status, attention, from, to, cursor, includeUnstarted = false }: PaymentAdminListCommand,
     policy: PaymentReviewPolicy & { asOf: string } = { dueHours: 24, soonHours: 6, asOf: new Date().toISOString() },
   ): Promise<PaymentAdminRecord[]> {
     // Keep PostgreSQL microseconds as text throughout the read and cursor round trip.
@@ -23,8 +23,16 @@ export class PaymentAdminPrismaAdapter extends PaymentAdminQueryPort {
         review."attention",
         latest."orderId" AS "attemptOrderId", latest."status" AS "attemptStatus", latest."method" AS "attemptMethod",
         latest."cancelReason" AS "attemptCancelReason"
-      FROM "AuctionPurchase" p
-      JOIN "Auctions" auction ON auction."auctionUuid" = p."auctionUuid"
+      FROM "Auctions" auction
+      LEFT JOIN "AuctionPurchase" purchase ON purchase."auctionUuid" = auction."auctionUuid"
+      CROSS JOIN LATERAL (
+        SELECT purchase."purchaseUuid", auction."auctionUuid",
+          COALESCE(purchase."buyerUuid"::text, auction."currentBidderUuid") AS "buyerUuid",
+          COALESCE(purchase."orderName", auction."title") AS "orderName",
+          COALESCE(purchase."amount", auction."currentBid") AS "amount",
+          COALESCE(purchase."status"::text, 'NOT_STARTED') AS "status",
+          COALESCE(purchase."createdAt", auction."endAt") AS "createdAt", purchase."paidAt"
+      ) p
       LEFT JOIN LATERAL (
         SELECT a."orderId", a."status", a."method", a."errorCode", a."cancelReason"
         FROM "AuctionPaymentAttempt" a WHERE a."purchaseUuid" = p."purchaseUuid"
@@ -37,13 +45,19 @@ export class PaymentAdminPrismaAdapter extends PaymentAdminQueryPort {
         SELECT CASE
           WHEN p."status" = 'CANCELED' THEN 'NONE'
           WHEN latest."errorCode" IS NOT NULL OR latest."status" IN ('CONFIRMING', 'UNKNOWN', 'CANCELING', 'WAITING_FOR_DEPOSIT') THEN 'REVIEW_REQUIRED'
-          WHEN p."status" <> 'AWAITING_PAYMENT' THEN 'NONE'
+          WHEN p."status" NOT IN ('AWAITING_PAYMENT', 'NOT_STARTED') THEN 'NONE'
           WHEN deadline."dueAt" <= ${policy.asOf}::timestamptz THEN 'OVERDUE'
           WHEN deadline."dueAt" <= ${policy.asOf}::timestamptz + (${policy.soonHours}::integer * interval '1 hour') THEN 'DUE_SOON'
           ELSE 'WAITING'
         END AS "attention"
       ) review
-      WHERE true
+      WHERE (p."purchaseUuid" IS NOT NULL OR (${includeUnstarted} AND
+        auction."status" = 'visible' AND auction."deletedAt" IS NULL AND auction."soldAt" IS NULL
+        AND auction."endAt" <= ${policy.asOf}::timestamptz
+        AND NULLIF(trim(auction."currentBidderUuid"), '') IS NOT NULL
+        AND auction."currentBidderUuid" <> auction."sellerUuid"::text
+        AND auction."currentBid" > 0 AND auction."currentBid" <= 9007199254740991
+      ))
       ${
         query
           ? Prisma.sql`AND (strpos(lower(p."orderName"), lower(${query})) > 0 OR EXISTS (
@@ -52,12 +66,12 @@ export class PaymentAdminPrismaAdapter extends PaymentAdminQueryPort {
       ))`
           : Prisma.empty
       }
-      ${status ? Prisma.sql`AND p."status" = ${status}::"AuctionPurchaseStatus"` : Prisma.empty}
+      ${status ? Prisma.sql`AND p."status" = ${status}` : Prisma.empty}
       ${attention ? Prisma.sql`AND review."attention" = ${attention}` : Prisma.empty}
       ${from ? Prisma.sql`AND p."createdAt" >= ${from}::timestamptz` : Prisma.empty}
       ${to ? Prisma.sql`AND p."createdAt" < ${to}::timestamptz` : Prisma.empty}
-      ${cursor ? Prisma.sql`AND (p."createdAt", p."purchaseUuid") < (${cursor.createdAt}::timestamptz, ${cursor.purchaseUuid}::uuid)` : Prisma.empty}
-      ORDER BY p."createdAt" DESC, p."purchaseUuid" DESC
+      ${cursor ? Prisma.sql`AND (p."createdAt", p."auctionUuid") < (${cursor.createdAt}::timestamptz, ${cursor.auctionUuid ? Prisma.sql`${cursor.auctionUuid}::uuid` : Prisma.sql`(SELECT "auctionUuid" FROM "AuctionPurchase" WHERE "purchaseUuid" = ${cursor.purchaseUuid}::uuid)`})` : Prisma.empty}
+      ORDER BY p."createdAt" DESC, p."auctionUuid" DESC
       LIMIT 21
     `);
   }

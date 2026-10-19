@@ -29,6 +29,34 @@ const row = {
 };
 
 describe('admin payment list HTTP', () => {
+  it('accepts unstarted wins and their auction cursor without creating an order', async () => {
+    const response = await app.inject({
+      method: 'GET',
+      url: `${path}?includeUnstarted=true&status=NOT_STARTED&createdAt=${createdAt}&auctionUuid=${row.auctionUuid}`,
+      headers,
+    });
+    expect(response.statusCode).toBe(200);
+    expect(queryRaw.mock.calls[0][0].values).toContain('NOT_STARTED');
+    expect(queryRaw.mock.calls[0][0].values).toContain(true);
+    expect(queryRaw.mock.calls[0][0].values).toContain(row.auctionUuid);
+    expect(forbidden).not.toHaveBeenCalled();
+  });
+
+  it('rejects ambiguous purchase and auction cursors', async () => {
+    const response = await app.inject({
+      method: 'GET',
+      url: `${path}?createdAt=${createdAt}&purchaseUuid=${purchaseUuid}&auctionUuid=${row.auctionUuid}`,
+      headers,
+    });
+    expect(response.statusCode).toBe(400);
+    expect(queryRaw).not.toHaveBeenCalled();
+  });
+
+  it.each(['yes', '1', '', 'true&includeUnstarted=false'])('rejects malformed inclusion options: %s', async (value) => {
+    const response = await app.inject({ method: 'GET', url: `${path}?includeUnstarted=${value}`, headers });
+    expect(response.statusCode).toBe(400);
+    expect(queryRaw).not.toHaveBeenCalled();
+  });
   it.each(['WAITING', 'DUE_SOON', 'OVERDUE', 'REVIEW_REQUIRED'])(
     'accepts the management filter %s',
     async (attention) => {

@@ -2,6 +2,20 @@ import { PaymentAdminService } from './payment-admin.service';
 import { ConfigService } from '@nestjs/config';
 
 describe('PaymentAdminService', () => {
+  it('uses an auction cursor for a win that has no purchase or attempt', async () => {
+    const rows = Array.from({ length: 21 }, () => ({
+      ...record,
+      purchaseUuid: null,
+      status: 'NOT_STARTED' as const,
+      paidAt: null,
+      attemptOrderId: null,
+      attemptStatus: null,
+      attemptMethod: null,
+    }));
+    const result = await new PaymentAdminService({ find: async () => rows }).list({});
+    expect(result.items[0]).toMatchObject({ purchaseUuid: null, status: 'NOT_STARTED', attempt: null });
+    expect(result.nextCursor).toEqual({ createdAt, auctionUuid: record.auctionUuid });
+  });
   it('projects the latest cancellation reason verbatim without exposing provider credentials', async () => {
     const service = new PaymentAdminService({
       find: async () => [{ ...record, attemptCancelReason: 'Legacy handwritten reason' }],

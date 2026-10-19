@@ -82,6 +82,147 @@ describe.skipIf(!url)('payment concurrency on isolated PostgreSQL', () => {
     expect((await store.read(uuid)).purchase!.attempts).toHaveLength(1);
   });
 
+  it('lists eligible wins without creating purchases and excludes unavailable or invalid wins', async () => {
+    const query = new PaymentAdminPrismaAdapter(database as PrismaService);
+    const title = `Unstarted ${uuid}`;
+    await database.auctions.update({
+      where: { auctionUuid: uuid },
+      data: { title, endAt: new Date('2026-10-18T00:00:00Z') },
+    });
+    const policy = { dueHours: 24, soonHours: 6, asOf: '2026-10-19T00:00:00Z' };
+    expect(await query.find({ query: title }, policy)).toHaveLength(0);
+    expect(await query.find({ query: title, includeUnstarted: false }, policy)).toHaveLength(0);
+    expect(
+      await query.find({ query: title, includeUnstarted: true, status: 'NOT_STARTED', attention: 'OVERDUE' }, policy),
+    ).toMatchObject([
+      {
+        purchaseUuid: null,
+        auctionUuid: uuid,
+        buyerUuid,
+        amount: 15000n,
+        status: 'NOT_STARTED',
+        createdAt: '2026-10-18T00:00:00.000000Z',
+        reviewDueAt: '2026-10-19T00:00:00.000000Z',
+        attemptOrderId: null,
+      },
+    ]);
+    for (const invalid of [
+      { status: 'hidden' as const },
+      { status: 'cancelled' as const },
+      { deletedAt: new Date() },
+      { soldAt: new Date() },
+      { endAt: new Date('2026-10-20T00:00:00Z') },
+      { currentBidderUuid: null },
+      { currentBidderUuid: '' },
+      { currentBidderUuid: sellerUuid },
+      { currentBid: 0n },
+      { currentBid: 9007199254740992n },
+    ]) {
+      await database.auctions.update({
+        where: { auctionUuid: uuid },
+        data: {
+          status: 'visible',
+          deletedAt: null,
+          soldAt: null,
+          endAt: new Date('2026-10-18T00:00:00Z'),
+          currentBidderUuid: buyerUuid,
+          currentBid: 15000n,
+          ...invalid,
+        },
+      });
+      expect(await query.find({ query: title, includeUnstarted: true }, policy)).toHaveLength(0);
+    }
+    expect(await database.auctionPurchase.count({ where: { auctionUuid: uuid } })).toBe(0);
+    expect(provider.confirms).toHaveLength(0);
+    expect(provider.cancels).toHaveLength(0);
+  });
+
+  it('replaces the unstarted projection with the actual purchase without duplicating a canceled win', async () => {
+    const listing = new PaymentAdminService(new PaymentAdminPrismaAdapter(database as PrismaService));
+    const title = `Transition ${uuid}`;
+    await database.auctions.update({ where: { auctionUuid: uuid }, data: { title } });
+    expect((await listing.list({ query: title, includeUnstarted: true })).items).toMatchObject([
+      { purchaseUuid: null, status: 'NOT_STARTED' },
+    ]);
+    const prepared = await service.prepare(uuid, buyerUuid);
+    expect((await listing.list({ query: title, includeUnstarted: true })).items).toMatchObject([
+      { purchaseUuid: prepared.purchase!.purchaseUuid, status: 'AWAITING_PAYMENT' },
+    ]);
+    expect((await listing.list({ query: title, includeUnstarted: true, status: 'NOT_STARTED' })).items).toHaveLength(0);
+    await database.auctionPurchase.update({ where: { auctionUuid: uuid }, data: { status: 'CANCELED' } });
+    expect((await listing.list({ query: title, includeUnstarted: true })).items).toMatchObject([
+      { status: 'CANCELED', attention: 'NONE' },
+    ]);
+    expect((await listing.list({ query: title, includeUnstarted: true, status: 'NOT_STARTED' })).items).toHaveLength(0);
+  });
+
+  it('paginates mixed unstarted and existing orders at tied microsecond timestamps', async () => {
+    const title = randomUUID();
+    extraUuids = Array.from({ length: 44 }, () => randomUUID()).sort();
+    await database.auctions.createMany({
+      data: extraUuids.map((auctionUuid) => ({
+        auctionUuid,
+        title,
+        description: 'Mixed listing fixture',
+        minimumBid: 10000n,
+        currentBid: 15000n,
+        currentBidderUuid: buyerUuid,
+        sellerUuid,
+        startAt: new Date('2026-10-16T00:00:00Z'),
+        endAt: new Date('2026-10-18T00:00:00Z'),
+        isDirectDeal: false,
+        status: 'visible',
+        productCondition: 'used',
+        thumbnailKey: 'test.webp',
+      })),
+    });
+    await database.auctionPurchase.createMany({
+      data: extraUuids
+        .filter((_, index) => index % 2 === 0)
+        .map((auctionUuid) => ({
+          auctionUuid,
+          buyerUuid,
+          sellerUuid,
+          amount: 15000n,
+          orderName: title,
+          customerKey: randomUUID(),
+          createdAt: new Date('2026-10-18T00:00:00Z'),
+        })),
+    });
+    await database.$executeRaw`UPDATE "Auctions" SET "endAt" = '2026-10-18T00:00:00.123456Z'::timestamptz WHERE "title" = ${title}`;
+    await database.$executeRaw`UPDATE "AuctionPurchase" SET "createdAt" = '2026-10-18T00:00:00.123456Z'::timestamptz WHERE "orderName" = ${title}`;
+    const listing = new PaymentAdminService(new PaymentAdminPrismaAdapter(database as PrismaService));
+    const first = await listing.list({ query: title, includeUnstarted: true });
+    const second = await listing.list({ query: title, includeUnstarted: true, cursor: first.nextCursor! });
+    const third = await listing.list({ query: title, includeUnstarted: true, cursor: second.nextCursor! });
+    expect(first.items).toHaveLength(20);
+    expect(second.items).toHaveLength(20);
+    expect(third.items).toHaveLength(4);
+    expect(third.nextCursor).toBeNull();
+    expect([...first.items, ...second.items, ...third.items].map((row) => row.auctionUuid)).toEqual(
+      [...extraUuids].reverse(),
+    );
+    expect(first.nextCursor).toEqual({
+      createdAt: '2026-10-18T00:00:00.123456Z',
+      purchaseUuid: first.items[19].purchaseUuid,
+    });
+    const unstarted = await listing.list({ query: title, includeUnstarted: true, status: 'NOT_STARTED' });
+    const rest = await listing.list({
+      query: title,
+      includeUnstarted: true,
+      status: 'NOT_STARTED',
+      cursor: unstarted.nextCursor!,
+    });
+    expect(unstarted.nextCursor).toEqual({
+      createdAt: '2026-10-18T00:00:00.123456Z',
+      auctionUuid: unstarted.items[19].auctionUuid,
+    });
+    expect([...unstarted.items, ...rest.items]).toHaveLength(22);
+    expect(new Set([...unstarted.items, ...rest.items].map((row) => row.auctionUuid)).size).toBe(22);
+    expect(provider.confirms).toHaveLength(0);
+    expect(provider.cancels).toHaveLength(0);
+  });
+
   it('lists persisted orders with literal search, latest attempt and lossless microsecond boundaries', async () => {
     const prepared = await service.prepare(uuid, buyerUuid);
     const purchaseUuid = prepared.purchase!.purchaseUuid;

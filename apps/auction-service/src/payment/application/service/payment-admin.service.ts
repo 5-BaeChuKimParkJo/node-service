@@ -41,7 +41,13 @@ export class PaymentAdminService {
     const last = items[items.length - 1];
     return {
       items,
-      nextCursor: rows.length > 20 ? { createdAt: last.createdAt, purchaseUuid: last.purchaseUuid } : null,
+      nextCursor:
+        rows.length > 20
+          ? {
+              createdAt: last.createdAt,
+              ...(last.purchaseUuid ? { purchaseUuid: last.purchaseUuid } : { auctionUuid: last.auctionUuid }),
+            }
+          : null,
       policy,
     };
   }

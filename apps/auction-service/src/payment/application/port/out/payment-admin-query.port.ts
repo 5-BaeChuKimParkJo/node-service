@@ -1,13 +1,18 @@
-import { AttemptStatus, Purchase } from '../../../domain/payment-state';
-import { PaymentAdminListCommand, PaymentAttention, PaymentReviewPolicy } from '../../model/payment-admin-list.command';
+import { AttemptStatus } from '../../../domain/payment-state';
+import {
+  PaymentAdminListCommand,
+  PaymentAdminStatus,
+  PaymentAttention,
+  PaymentReviewPolicy,
+} from '../../model/payment-admin-list.command';
 
 export type PaymentAdminRecord = {
-  purchaseUuid: string;
+  purchaseUuid: string | null;
   auctionUuid: string;
   buyerUuid: string;
   orderName: string;
   amount: bigint;
-  status: Purchase['status'];
+  status: PaymentAdminStatus;
   createdAt: string;
   paidAt: string | null;
   reviewDueAt: string;
