@@ -114,6 +114,9 @@ idempotency records for 15); unresolved orders then require provider review and
 remain blocked. Full cancellations are terminal and ignore stale DONE events.
 Partial cancellations require manual review and cannot replay confirmation.
 Cancellation stores the original operator/reason; retries retain both.
+The admin list projects the latest attempt's stored `cancelReason` verbatim,
+including legacy free-form reasons. Preset labels remain plain reason strings;
+no reason-code column or migration is required.
 
 Allow at least 35 seconds for customer/admin mutation requests: provider calls
 time out after 10 seconds and an uncertain action can need a follow-up query.
@@ -156,11 +159,12 @@ $env:TEST_DATABASE_URL = 'postgresql://test:test@127.0.0.1:5432/auction_test'
 npm run test:payment:integration
 ```
 
-The 15 database cases cover simultaneous prepares, checkout-versus-bid row
+The 16 database cases cover simultaneous prepares, checkout-versus-bid row
 contention, order-list pagination, duplicate confirmations, expired leases,
 rollback of bid/outbox writes, and advisory deadline boundaries with unresolved
 payment precedence. Filtered pagination also covers 44 interleaved purchases
-with tied creation timestamps. Seven of these cases exercise the actual
+with tied creation timestamps and the original reason after repeated cancellation.
+Seven of these cases exercise the actual
 HTTP controllers, authentication, application service and Prisma adapter:
 
 - Concurrent confirmations and cancellations across independent app/database
@@ -175,7 +179,7 @@ HTTP controllers, authentication, application service and Prisma adapter:
 Only the external provider is replaced with a deterministic test double. These
 tests never call Toss and do not prove provider-side idempotency or real network
 failure behavior. Fixtures use unique auction IDs and delete only their own
-rows. Unit-only runs visibly skip all 15 cases without an explicit test database.
+rows. Unit-only runs visibly skip all 16 cases without an explicit test database.
 Node Quality provisions PostgreSQL in CI and runs both suites before any service
 image can be published.
 

@@ -12,7 +12,7 @@ export type PaymentAdminListItem = {
   paidAt: string | null;
   reviewDueAt: string;
   attention: PaymentAttention;
-  attempt: { orderId: string; status: AttemptStatus; method: string | null } | null;
+  attempt: { orderId: string; status: AttemptStatus; method: string | null; cancelReason: string | null } | null;
 };
 
 export type PaymentAdminListResult = {

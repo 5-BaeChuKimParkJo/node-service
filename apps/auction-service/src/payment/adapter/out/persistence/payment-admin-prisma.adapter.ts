@@ -21,11 +21,12 @@ export class PaymentAdminPrismaAdapter extends PaymentAdminQueryPort {
         to_char(p."paidAt" AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS "paidAt",
         to_char(deadline."dueAt" AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') AS "reviewDueAt",
         review."attention",
-        latest."orderId" AS "attemptOrderId", latest."status" AS "attemptStatus", latest."method" AS "attemptMethod"
+        latest."orderId" AS "attemptOrderId", latest."status" AS "attemptStatus", latest."method" AS "attemptMethod",
+        latest."cancelReason" AS "attemptCancelReason"
       FROM "AuctionPurchase" p
       JOIN "Auctions" auction ON auction."auctionUuid" = p."auctionUuid"
       LEFT JOIN LATERAL (
-        SELECT a."orderId", a."status", a."method", a."errorCode"
+        SELECT a."orderId", a."status", a."method", a."errorCode", a."cancelReason"
         FROM "AuctionPaymentAttempt" a WHERE a."purchaseUuid" = p."purchaseUuid"
         ORDER BY a."attemptNumber" DESC LIMIT 1
       ) latest ON true

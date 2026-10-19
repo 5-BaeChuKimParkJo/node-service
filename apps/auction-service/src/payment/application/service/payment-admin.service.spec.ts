@@ -2,6 +2,14 @@ import { PaymentAdminService } from './payment-admin.service';
 import { ConfigService } from '@nestjs/config';
 
 describe('PaymentAdminService', () => {
+  it('projects the latest cancellation reason verbatim without exposing provider credentials', async () => {
+    const service = new PaymentAdminService({
+      find: async () => [{ ...record, attemptCancelReason: 'Legacy handwritten reason' }],
+    });
+    const result = await service.list({});
+    expect(result.items[0].attempt).toMatchObject({ cancelReason: 'Legacy handwritten reason' });
+    expect(JSON.stringify(result)).not.toMatch(/paymentKey|customerKey|Idempotency/);
+  });
   it('uses the server policy and explicitly projects review data without secrets', async () => {
     const find = vi
       .fn()
@@ -38,6 +46,7 @@ describe('PaymentAdminService', () => {
     attemptOrderId: 'newest',
     attemptStatus: 'DONE' as const,
     attemptMethod: null,
+    attemptCancelReason: null,
     paymentKey: 'redact',
     customerKey: 'redact',
     operationLeaseToken: 'redact',
@@ -59,7 +68,7 @@ describe('PaymentAdminService', () => {
           paidAt: createdAt,
           reviewDueAt: record.reviewDueAt,
           attention: 'NONE',
-          attempt: { orderId: 'newest', status: 'DONE', method: null },
+          attempt: { orderId: 'newest', status: 'DONE', method: null, cancelReason: null },
         },
       ],
       nextCursor: null,

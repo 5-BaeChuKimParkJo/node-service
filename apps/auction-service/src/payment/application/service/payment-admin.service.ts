@@ -30,7 +30,12 @@ export class PaymentAdminService {
       attention: row.attention,
       attempt:
         row.attemptOrderId !== null
-          ? { orderId: row.attemptOrderId, status: row.attemptStatus, method: row.attemptMethod }
+          ? {
+              orderId: row.attemptOrderId,
+              status: row.attemptStatus,
+              method: row.attemptMethod,
+              cancelReason: row.attemptCancelReason,
+            }
           : null,
     }));
     const last = items[items.length - 1];

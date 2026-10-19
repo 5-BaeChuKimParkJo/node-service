@@ -12,6 +12,7 @@ export type PaymentAdminRecord = {
   paidAt: string | null;
   reviewDueAt: string;
   attention: PaymentAttention;
+  attemptCancelReason: string | null;
 } & (
   | { attemptOrderId: string; attemptStatus: AttemptStatus; attemptMethod: string | null }
   | { attemptOrderId: null; attemptStatus: null; attemptMethod: null }

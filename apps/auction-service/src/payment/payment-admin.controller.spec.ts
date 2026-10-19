@@ -25,6 +25,7 @@ const row = {
   attemptOrderId: 'latest_order',
   attemptStatus: 'DONE',
   attemptMethod: 'CARD',
+  attemptCancelReason: null,
 };
 
 describe('admin payment list HTTP', () => {
@@ -109,7 +110,7 @@ describe('admin payment list HTTP', () => {
           paidAt: '2026-10-18T11:00:00.654321Z',
           reviewDueAt: row.reviewDueAt,
           attention: 'NONE',
-          attempt: { orderId: 'latest_order', status: 'DONE', method: 'CARD' },
+          attempt: { orderId: 'latest_order', status: 'DONE', method: 'CARD', cancelReason: null },
         },
       ],
       nextCursor: null,
@@ -137,7 +138,7 @@ describe('admin payment list HTTP', () => {
     expect(forbidden).not.toHaveBeenCalled();
   });
 
-  it.each([
+  it.each<Record<string, string>>([
     { status: 'DONE' },
     { status: '' },
     { from: '2026-02-30T00:00:00Z' },

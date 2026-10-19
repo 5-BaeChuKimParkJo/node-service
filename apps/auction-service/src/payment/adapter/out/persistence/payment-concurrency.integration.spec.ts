@@ -348,4 +348,17 @@ describe.skipIf(!url)('payment concurrency on isolated PostgreSQL', () => {
     expect(provider.confirms).toHaveLength(0);
     expect(provider.cancels).toHaveLength(0);
   });
+
+  it('returns the persisted original cancellation reason in the administrator list', async () => {
+    const prepared = await service.prepare(uuid, buyerUuid);
+    const orderId = prepared.purchase!.attempt!.orderId;
+    await service.confirm(uuid, buyerUuid, { orderId, paymentKey: `test_${randomUUID()}`, amount: '15000' });
+    await service.cancel(uuid, 'first-operator', 'Legacy handwritten cancellation');
+    await service.cancel(uuid, 'later-operator', 'Different reason on retry');
+    const listing = new PaymentAdminService(new PaymentAdminPrismaAdapter(database as PrismaService));
+    const [row] = (await listing.list({ query: orderId })).items;
+    expect(row.attempt).toMatchObject({ status: 'CANCELED', cancelReason: 'Legacy handwritten cancellation' });
+    expect(provider.cancels).toHaveLength(1);
+    expect(JSON.stringify(row)).not.toMatch(/paymentKey|Idempotency|customerKey/);
+  });
 });
