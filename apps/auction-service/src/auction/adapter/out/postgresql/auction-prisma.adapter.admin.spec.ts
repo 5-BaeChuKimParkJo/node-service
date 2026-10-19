@@ -28,6 +28,31 @@ const row = {
 };
 
 describe('AuctionPrismaRepository admin actions', () => {
+  it('filters ending-soon auctions in the database before pagination', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-10-20T00:00:00Z'));
+    try {
+      const prisma = { auctions: { findMany: vi.fn().mockResolvedValue([]) } };
+      const repository = new AuctionPrismaAdapter(prisma as never, {} as never, {} as never);
+      await repository.findAuctions({ type: 'admin', endingSoon: true });
+      expect(prisma.auctions.findMany.mock.calls[0][0]).toMatchObject({
+        take: 21,
+        where: {
+          AND: expect.arrayContaining([
+            {
+              status: 'visible',
+              deletedAt: null,
+              soldAt: null,
+              startAt: { lte: new Date('2026-10-20T00:00:00Z') },
+              endAt: { gt: new Date('2026-10-20T00:00:00Z'), lte: new Date('2026-10-21T00:00:00Z') },
+            },
+          ]),
+        },
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
   it('updates the auction, audit row, and outbox in one transaction', async () => {
     const tx = {
       auctions: {

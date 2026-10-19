@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { ConfigService } from '@nestjs/config';
-import { PrismaClient } from '../../../../prisma/generated';
+import { Prisma, PrismaClient } from '../../../../prisma/generated';
 import { PrismaService } from '../../../../prisma/prisma.service';
 import { AuctionPrismaAdapter } from '../../../../auction/adapter/out/postgresql/auction-prisma.adapter';
 import NewBid from '../../../../auction/domain/model/new-bid';
@@ -501,5 +501,115 @@ describe.skipIf(!url)('payment concurrency on isolated PostgreSQL', () => {
     expect(row.attempt).toMatchObject({ status: 'CANCELED', cancelReason: 'Legacy handwritten cancellation' });
     expect(provider.cancels).toHaveLength(1);
     expect(JSON.stringify(row)).not.toMatch(/paymentKey|Idempotency|customerKey/);
+  });
+
+  it('counts the entire review dataset with the same precedence as the paginated list', async () => {
+    const title = randomUUID();
+    extraUuids = Array.from({ length: 28 }, () => randomUUID());
+    const policy = { asOf: '2026-10-20T00:00:00Z', dueHours: 24, soonHours: 6 };
+    await database.$transaction(
+      async (tx) => {
+        const read = new PaymentAdminPrismaAdapter(tx as unknown as PrismaService);
+        const before = await read.summarize(policy);
+        await tx.auctions.createMany({
+          data: extraUuids.map((auctionUuid) => ({
+            auctionUuid,
+            title,
+            description: 'Summary verification fixture',
+            minimumBid: 10000n,
+            currentBid: 15000n,
+            currentBidderUuid: buyerUuid,
+            sellerUuid,
+            startAt: new Date('2026-10-17T00:00:00Z'),
+            endAt: new Date('2026-10-18T00:00:00Z'),
+            isDirectDeal: false,
+            status: 'visible',
+            productCondition: 'used',
+            thumbnailKey: 'test.webp',
+          })),
+        });
+        const purchases = extraUuids.slice(25).map((auctionUuid, index) => ({
+          purchaseUuid: randomUUID(),
+          auctionUuid,
+          buyerUuid,
+          sellerUuid,
+          amount: 15000n,
+          orderName: title,
+          customerKey: randomUUID(),
+          status: index === 2 ? ('CANCELED' as const) : ('PAID' as const),
+        }));
+        await tx.auctionPurchase.createMany({ data: purchases });
+        await tx.auctionPaymentAttempt.createMany({
+          data: purchases.map((purchase, index) => ({
+            purchaseUuid: purchase.purchaseUuid,
+            orderId: randomUUID(),
+            attemptNumber: 1,
+            status: index === 0 ? ('CANCELING' as const) : index === 1 ? ('DONE' as const) : ('UNKNOWN' as const),
+            confirmIdempotencyKey: randomUUID(),
+            cancelIdempotencyKey: randomUUID(),
+          })),
+        });
+        const after = await read.summarize(policy);
+        expect(after.endingSoon - before.endingSoon).toBe(0n);
+        expect(after.notStarted - before.notStarted).toBe(25n);
+        expect(after.overdue - before.overdue).toBe(25n);
+        expect(after.reviewRequired - before.reviewRequired).toBe(1n);
+        const first = await read.find({ query: title, includeUnstarted: true, attention: 'OVERDUE' }, policy);
+        expect(first).toHaveLength(21);
+        expect(first.every((row) => row.attention === 'OVERDUE')).toBe(true);
+        expect(
+          await read.find({ query: title, includeUnstarted: true, attention: 'REVIEW_REQUIRED' }, policy),
+        ).toHaveLength(1);
+        expect(await tx.auctionPurchase.count({ where: { auctionUuid: { in: extraUuids } } })).toBe(3);
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+    );
+    expect(provider.confirms).toHaveLength(0);
+    expect(provider.cancels).toHaveLength(0);
+  });
+
+  it('counts only active visible unsold auctions within the next 24 hours', async () => {
+    const asOf = new Date('2026-10-20T00:00:00Z');
+    const policy = { asOf: asOf.toISOString(), dueHours: 24, soonHours: 6 };
+    const changes = [
+      { endAt: asOf },
+      { endAt: new Date(asOf.getTime() + 1) },
+      { endAt: new Date(asOf.getTime() + 86400000) },
+      { endAt: new Date(asOf.getTime() + 86400001) },
+      { status: 'hidden' as const },
+      { status: 'cancelled' as const },
+      { deletedAt: asOf },
+      { soldAt: asOf },
+      { startAt: new Date(asOf.getTime() + 1) },
+    ];
+    extraUuids = changes.map(() => randomUUID());
+    await database.$transaction(
+      async (tx) => {
+        const read = new PaymentAdminPrismaAdapter(tx as unknown as PrismaService);
+        const before = await read.summarize(policy);
+        await tx.auctions.createMany({
+          data: changes.map((change, index) => ({
+            auctionUuid: extraUuids[index],
+            title: 'Summary ending window',
+            description: 'Isolated boundary fixture',
+            minimumBid: 10000n,
+            currentBid: 15000n,
+            currentBidderUuid: null,
+            sellerUuid,
+            startAt: new Date('2026-10-19T00:00:00Z'),
+            endAt: new Date('2026-10-20T12:00:00Z'),
+            isDirectDeal: false,
+            status: 'visible',
+            productCondition: 'used',
+            thumbnailKey: 'test.webp',
+            ...change,
+          })),
+        });
+        const after = await read.summarize(policy);
+        expect(after.endingSoon - before.endingSoon).toBe(2n);
+        expect(after.notStarted).toBe(before.notStarted);
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+    );
   });
 });

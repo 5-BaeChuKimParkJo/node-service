@@ -26,6 +26,7 @@ import AdminAuction from '../../../domain/model/admin-auction';
 import { auctionAdminPropsSchema } from '../../../domain/schema/auction-admin.schema';
 import { AuctionsCommand } from '../../../application/model/auctions.command';
 import { AuctionsAdminCommand } from '../../../application/model/auctions-admin.command';
+import { ENDING_SOON_HOURS } from '../../../domain/model/auction-operations-policy';
 import { AuctionBiddersCommand } from '../../../application/model/auction-bidders.command';
 import { AuctionsByIdsCommand } from '../../../application/model/auctions-by-ids.command';
 import { AuctionsByIdsAdminCommand } from '../../../application/model/auctions-by-ids-admin.command';
@@ -212,6 +213,14 @@ export class AuctionPrismaAdapter extends AuctionRepositoryPort {
       });
     }
     if (type === 'admin' && status) filters.push(this.adminStatusWhere(status, now));
+    if (type === 'admin' && command.endingSoon)
+      filters.push({
+        status: 'visible',
+        deletedAt: null,
+        soldAt: null,
+        startAt: { lte: now },
+        endAt: { gt: now, lte: new Date(now.getTime() + ENDING_SOON_HOURS * 3600000) },
+      });
     if (cursor) {
       filters.push({
         OR: [

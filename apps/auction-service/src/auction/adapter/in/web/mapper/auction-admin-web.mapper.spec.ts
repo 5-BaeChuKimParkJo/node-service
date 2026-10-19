@@ -1,6 +1,13 @@
 import { AuctionAdminWebMapper } from './auction-admin-web.mapper';
 
 describe('AuctionAdminDtoMapper', () => {
+  it('validates the ending-soon option without truthy coercion', () => {
+    expect(AuctionAdminWebMapper.toListCommand({ endingSoon: 'true' }).endingSoon).toBe(true);
+    expect(AuctionAdminWebMapper.toListCommand({ endingSoon: 'false' }).endingSoon).toBe(false);
+    for (const endingSoon of ['', '1', 'yes', ['true', 'false']]) {
+      expect(() => AuctionAdminWebMapper.toListCommand({ endingSoon: endingSoon as string })).toThrow();
+    }
+  });
   it('maps trimmed search, status, and a complete cursor', () => {
     expect(
       AuctionAdminWebMapper.toListCommand({

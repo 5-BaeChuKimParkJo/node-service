@@ -16,6 +16,10 @@ const bidsSchema = z
 
 const listSchema = z
   .object({
+    endingSoon: z
+      .enum(['true', 'false'])
+      .transform((value) => value === 'true')
+      .optional(),
     query: z.string().trim().max(100).optional(),
     status: z.enum(['waiting', 'active', 'ended', 'hidden', 'cancelled']).optional(),
     createdAt: z.string().datetime().optional(),
@@ -50,6 +54,7 @@ export class AuctionAdminWebMapper {
       type: 'admin',
       query: parsed.query || undefined,
       status: parsed.status,
+      ...(parsed.endingSoon !== undefined ? { endingSoon: parsed.endingSoon } : {}),
       cursor:
         parsed.createdAt && parsed.auctionUuid
           ? { createdAt: new Date(parsed.createdAt), auctionUuid: parsed.auctionUuid }

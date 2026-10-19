@@ -1,6 +1,8 @@
 import { ApiProperty } from '@nestjs/swagger';
 
 export class AuctionAdminListRequest {
+  @ApiProperty({ required: false, enum: ['true', 'false'] })
+  endingSoon?: string;
   @ApiProperty({ required: false })
   query?: string;
 

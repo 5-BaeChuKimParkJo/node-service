@@ -172,7 +172,7 @@ $env:TEST_DATABASE_URL = 'postgresql://test:test@127.0.0.1:5432/auction_test'
 npm run test:payment:integration
 ```
 
-The 19 database cases cover simultaneous prepares, checkout-versus-bid row
+The 21 database cases cover simultaneous prepares, checkout-versus-bid row
 contention, order-list pagination, duplicate confirmations, expired leases,
 rollback of bid/outbox writes, and advisory deadline boundaries with unresolved
 payment precedence. Filtered pagination also covers 44 interleaved purchases
@@ -193,9 +193,26 @@ HTTP controllers, authentication, application service and Prisma adapter:
 Only the external provider is replaced with a deterministic test double. These
 tests never call Toss and do not prove provider-side idempotency or real network
 failure behavior. Fixtures use unique auction IDs and delete only their own
-rows. Unit-only runs visibly skip all 19 cases without an explicit test database.
+rows. Unit-only runs visibly skip all 21 cases without an explicit test database.
 Node Quality provisions PostgreSQL in CI and runs both suites before any service
 image can be published.
+
+## Operations Summary
+
+`GET /api/v1/internal/admin/payments/summary` requires the existing internal
+administrator token. It returns a single `asOf` UTC snapshot, `endingHours: 24`,
+and decimal-string counts `endingSoon`, `notStarted`, `overdue`, `reviewRequired`.
+One SQL statement counts all payment rows using the same projection and review
+precedence as the list, without a page limit. Unstarted and overdue categories
+can overlap; canceled purchases are not overdue or unresolved.
+
+`endingSoon` counts active, visible, non-deleted, unsold auctions with start time
+at or before the snapshot and end time in `(asOf, asOf + 24 hours]`. The auction
+admin list accepts literal `endingSoon=true|false` and applies the same rolling
+window before pagination. Counters may change between a snapshot and opening
+its live list. Summary errors propagate rather than returning fabricated zeros.
+The isolated tests verify totals beyond 20 rows and window boundaries under a
+repeatable-read transaction, so concurrent test fixtures cannot skew assertions.
 
 Payment state lives in `domain`; the application depends only on
 `PaymentStorePort` and `PaymentProviderPort`. `PaymentPrismaAdapter` owns row

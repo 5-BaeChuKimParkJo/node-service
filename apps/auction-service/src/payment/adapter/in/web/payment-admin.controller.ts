@@ -2,6 +2,7 @@ import { Controller, Get, Query, UseGuards } from '@nestjs/common';
 import { z } from 'zod';
 import { InternalAdminTokenGuard } from '../../../../auction/adapter/in/web/internal-admin-token.guard';
 import { PaymentAdminService } from '../../../application/service/payment-admin.service';
+import { PaymentAdminSummaryService } from '../../../application/service/payment-admin-summary.service';
 
 const utcTimestamp = z
   .string()
@@ -45,7 +46,15 @@ const listRequest = z
 @Controller({ path: 'internal/admin/payments', version: '1' })
 @UseGuards(InternalAdminTokenGuard)
 export class PaymentAdminController {
-  constructor(private readonly payments: PaymentAdminService) {}
+  constructor(
+    private readonly payments: PaymentAdminService,
+    private readonly summary: PaymentAdminSummaryService,
+  ) {}
+
+  @Get('summary')
+  summarize() {
+    return this.summary.summarize();
+  }
 
   @Get()
   list(@Query() request: unknown) {

@@ -12,6 +12,8 @@ import { PaymentAdminController } from './adapter/in/web/payment-admin.controlle
 import { PaymentAdminService } from './application/service/payment-admin.service';
 import { PaymentAdminQueryPort } from './application/port/out/payment-admin-query.port';
 import { PaymentAdminPrismaAdapter } from './adapter/out/persistence/payment-admin-prisma.adapter';
+import { PaymentAdminSummaryService } from './application/service/payment-admin-summary.service';
+import { PaymentAdminSummaryPort } from './application/port/out/payment-admin-summary.port';
 
 @Module({
   imports: [ConfigModule, PrismaModule],
@@ -19,7 +21,10 @@ import { PaymentAdminPrismaAdapter } from './adapter/out/persistence/payment-adm
   providers: [
     PaymentService,
     PaymentAdminService,
-    { provide: PaymentAdminQueryPort, useClass: PaymentAdminPrismaAdapter },
+    PaymentAdminPrismaAdapter,
+    PaymentAdminSummaryService,
+    { provide: PaymentAdminQueryPort, useExisting: PaymentAdminPrismaAdapter },
+    { provide: PaymentAdminSummaryPort, useExisting: PaymentAdminPrismaAdapter },
     { provide: PaymentProviderPort, useClass: TossPaymentAdapter },
     InternalAdminTokenGuard,
     { provide: PaymentStorePort, useClass: PaymentPrismaAdapter },

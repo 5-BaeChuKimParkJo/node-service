@@ -29,6 +29,30 @@ const row = {
 };
 
 describe('admin payment list HTTP', () => {
+  it('returns safe whole-dataset summary counts as exact strings in one read', async () => {
+    queryRaw.mockResolvedValue([
+      { endingSoon: 93n, notStarted: 9007199254740993n, overdue: 40n, reviewRequired: 2n, paymentKey: 'private' },
+    ]);
+    const response = await app.inject({ method: 'GET', url: `${path}/summary`, headers });
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({
+      asOf: expect.stringMatching(/Z$/),
+      endingHours: 24,
+      endingSoon: '93',
+      notStarted: '9007199254740993',
+      overdue: '40',
+      reviewRequired: '2',
+    });
+    expect(queryRaw).toHaveBeenCalledTimes(1);
+    expect(queryRaw.mock.calls[0][0].text).not.toContain('LIMIT 21');
+    expect(forbidden).not.toHaveBeenCalled();
+  });
+
+  it('protects the summary with the existing internal token', async () => {
+    const response = await app.inject({ method: 'GET', url: `${path}/summary` });
+    expect(response.statusCode).toBe(401);
+    expect(queryRaw).not.toHaveBeenCalled();
+  });
   it('accepts unstarted wins and their auction cursor without creating an order', async () => {
     const response = await app.inject({
       method: 'GET',
