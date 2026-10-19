@@ -11,6 +11,23 @@ const base = {
 };
 
 describe('test-only payment configuration and transport', () => {
+  it('defaults advisory deadlines to 24 hours and the warning window to 6 hours', () => {
+    expect(envSchema.parse(base)).toMatchObject({ PAYMENT_REVIEW_HOURS: 24, PAYMENT_REVIEW_SOON_HOURS: 6 });
+    expect(envSchema.parse({ ...base, PAYMENT_REVIEW_HOURS: '48', PAYMENT_REVIEW_SOON_HOURS: '12' })).toMatchObject({
+      PAYMENT_REVIEW_HOURS: 48,
+      PAYMENT_REVIEW_SOON_HOURS: 12,
+    });
+  });
+  it.each([
+    { PAYMENT_REVIEW_HOURS: '0' },
+    { PAYMENT_REVIEW_HOURS: '169' },
+    { PAYMENT_REVIEW_HOURS: '1.5' },
+    { PAYMENT_REVIEW_SOON_HOURS: '0' },
+    { PAYMENT_REVIEW_SOON_HOURS: '25' },
+    { PAYMENT_REVIEW_HOURS: 'bad' },
+  ])('rejects invalid advisory deadline configuration: %j', (values) => {
+    expect(envSchema.safeParse({ ...base, ...values }).success).toBe(false);
+  });
   afterEach(() => vi.unstubAllGlobals());
 
   it('defaults to disabled and parses false as false', () => {

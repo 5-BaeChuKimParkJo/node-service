@@ -7,6 +7,25 @@ describe('PaymentAdminPrismaAdapter SQL boundary', () => {
     return { queryRaw, adapter: new PaymentAdminPrismaAdapter({ $queryRaw: queryRaw } as unknown as PrismaService) };
   };
 
+  it('classifies before pagination with a parameterized deadline and prioritizes unresolved actions', async () => {
+    const { adapter, queryRaw } = setup();
+    await adapter.find(
+      { attention: 'OVERDUE' },
+      {
+        asOf: '2026-10-19T00:00:00Z',
+        dueHours: 24,
+        soonHours: 6,
+      },
+    );
+    const sql = queryRaw.mock.calls[0][0];
+    expect(sql.values).toEqual(expect.arrayContaining(['OVERDUE', '2026-10-19T00:00:00Z', 24, 6]));
+    expect(sql.text).toContain('auction."endAt"');
+    expect(sql.text.indexOf("THEN 'REVIEW_REQUIRED'")).toBeGreaterThan(-1);
+    expect(sql.text.indexOf("THEN 'REVIEW_REQUIRED'")).toBeLessThan(sql.text.indexOf("THEN 'OVERDUE'"));
+    expect(sql.text).toMatch(/AND review\."attention" = \$\d+/);
+    expect(sql.text.indexOf('AND review."attention"')).toBeLessThan(sql.text.indexOf('LIMIT 21'));
+  });
+
   it('selects explicit safe fields and timestamp text, reads the latest numbered attempt and fixes the page bound', async () => {
     const { adapter, queryRaw } = setup();
     await expect(adapter.find({})).resolves.toEqual([]);
@@ -43,7 +62,7 @@ describe('PaymentAdminPrismaAdapter SQL boundary', () => {
         '10000000-0000-4000-8000-000000000001',
       ]),
     );
-    expect(sql.values.every((value: unknown) => typeof value === 'string')).toBe(true);
+    expect(sql.values.filter((value: unknown) => typeof value === 'number')).toEqual([24, 6]);
     expect(sql.text).not.toContain('OR 1=1');
     expect(sql.text).not.toMatch(/\bLIKE\b|\bILIKE\b/);
     expect(sql.text).toContain('strpos(lower(p."orderName"), lower(');

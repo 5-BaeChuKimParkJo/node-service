@@ -27,6 +27,7 @@ describe.skipIf(!url)('payment concurrency on isolated PostgreSQL', () => {
   let uuid: string;
   let provider: FakePaymentProvider;
   let service: PaymentService;
+  let extraUuids: string[];
 
   beforeAll(async () => {
     await database.$connect();
@@ -34,6 +35,7 @@ describe.skipIf(!url)('payment concurrency on isolated PostgreSQL', () => {
   });
   beforeEach(async () => {
     uuid = randomUUID();
+    extraUuids = [];
     provider = new FakePaymentProvider();
     service = new PaymentService(
       store,
@@ -60,11 +62,12 @@ describe.skipIf(!url)('payment concurrency on isolated PostgreSQL', () => {
     });
   });
   afterEach(async () => {
-    await database.auctionPaymentAttempt.deleteMany({ where: { purchase: { auctionUuid: uuid } } });
-    await database.auctionPurchase.deleteMany({ where: { auctionUuid: uuid } });
+    const fixtures = [uuid, ...extraUuids];
+    await database.auctionPaymentAttempt.deleteMany({ where: { purchase: { auctionUuid: { in: fixtures } } } });
+    await database.auctionPurchase.deleteMany({ where: { auctionUuid: { in: fixtures } } });
     await database.auctionBidders.deleteMany({ where: { auction: { auctionUuid: uuid } } });
     await database.outbox.deleteMany({ where: { aggregateId: uuid } });
-    await database.auctions.deleteMany({ where: { auctionUuid: uuid } });
+    await database.auctions.deleteMany({ where: { auctionUuid: { in: fixtures } } });
   });
   afterAll(async () => {
     await bidder.$disconnect();
@@ -235,5 +238,114 @@ describe.skipIf(!url)('payment concurrency on isolated PostgreSQL', () => {
     expect(await database.auctionBidders.count({ where: { auction: { auctionUuid: uuid } } })).toBe(0);
     expect(await database.outbox.count({ where: { aggregateId: uuid } })).toBe(0);
     expect((await store.read(uuid)).auction.currentBid).toBe(15000n);
+  });
+
+  it('classifies advisory deadlines at microsecond boundaries and keeps uncertain paid cancellations in review', async () => {
+    const prepared = await service.prepare(uuid, buyerUuid);
+    const orderId = prepared.purchase!.attempt!.orderId;
+    const query = new PaymentAdminPrismaAdapter(database as PrismaService);
+    const policy = { dueHours: 24, soonHours: 6, asOf: '2026-10-19T00:00:00Z' };
+    for (const [endAt, attention, reviewDueAt] of [
+      ['2026-10-18T06:00:00.000001Z', 'WAITING', '2026-10-19T06:00:00.000001Z'],
+      ['2026-10-18T06:00:00.000000Z', 'DUE_SOON', '2026-10-19T06:00:00.000000Z'],
+      ['2026-10-18T00:00:00.000001Z', 'DUE_SOON', '2026-10-19T00:00:00.000001Z'],
+      ['2026-10-18T00:00:00.000000Z', 'OVERDUE', '2026-10-19T00:00:00.000000Z'],
+      ['2026-10-17T00:00:00.000000Z', 'OVERDUE', '2026-10-18T00:00:00.000000Z'],
+    ] as const) {
+      await database.$executeRaw`UPDATE "Auctions" SET "endAt" = ${endAt}::timestamptz WHERE "auctionUuid" = ${uuid}::uuid`;
+      const [row] = await query.find({ query: orderId, attention }, policy);
+      expect(row).toMatchObject({ attention, reviewDueAt });
+      expect(
+        await query.find({ query: orderId, attention: attention === 'OVERDUE' ? 'WAITING' : 'OVERDUE' }, policy),
+      ).toHaveLength(0);
+    }
+    await database.auctionPurchase.update({ where: { auctionUuid: uuid }, data: { status: 'PAID' } });
+    await database.auctionPaymentAttempt.update({ where: { orderId }, data: { status: 'CANCELING' } });
+    expect(await query.find({ query: orderId, attention: 'REVIEW_REQUIRED' }, policy)).toHaveLength(1);
+    expect(await query.find({ query: orderId, attention: 'OVERDUE' }, policy)).toHaveLength(0);
+    await database.auctionPaymentAttempt.update({
+      where: { orderId },
+      data: { status: 'DONE', errorCode: 'PROVIDER_MISMATCH' },
+    });
+    expect(await query.find({ query: orderId, attention: 'REVIEW_REQUIRED' }, policy)).toHaveLength(1);
+    await database.auctionPurchase.update({ where: { auctionUuid: uuid }, data: { status: 'CANCELED' } });
+    expect(await query.find({ query: orderId, attention: 'REVIEW_REQUIRED' }, policy)).toHaveLength(0);
+    expect((await query.find({ query: orderId }, policy))[0].attention).toBe('NONE');
+    expect(provider.confirms).toHaveLength(0);
+    expect(provider.cancels).toHaveLength(0);
+  });
+
+  it('paginates filtered orders before the lookahead with interleaved states and tied timestamps', async () => {
+    const group = randomUUID();
+    const prefix = randomUUID().slice(0, 24);
+    const rows = Array.from({ length: 44 }, (_, index) => ({
+      uuid: prefix + String(index).padStart(12, '0'),
+      overdue: index % 2 === 0,
+      endAt: new Date(index % 2 === 0 ? '2026-10-17T00:00:00Z' : '2026-10-19T00:00:00Z'),
+    }));
+    extraUuids = rows.map((row) => row.uuid);
+    await database.auctions.createMany({
+      data: rows.map((row) => ({
+        auctionUuid: row.uuid,
+        title: group,
+        description: 'Isolated pagination fixture',
+        minimumBid: 10000n,
+        currentBid: 15000n,
+        currentBidderUuid: buyerUuid,
+        sellerUuid,
+        startAt: new Date('2026-10-16T00:00:00Z'),
+        endAt: row.endAt,
+        isDirectDeal: false,
+        status: 'visible',
+        productCondition: 'used',
+        thumbnailKey: 'test.webp',
+      })),
+    });
+    await database.auctionPurchase.createMany({
+      data: rows.map((row) => ({
+        purchaseUuid: row.uuid,
+        auctionUuid: row.uuid,
+        buyerUuid,
+        sellerUuid,
+        amount: 15000n,
+        orderName: group,
+        customerKey: randomUUID(),
+        status: 'AWAITING_PAYMENT',
+        createdAt: new Date('2026-10-18T00:00:00Z'),
+      })),
+    });
+    await database.auctionPaymentAttempt.createMany({
+      data: rows.map((row) => ({
+        purchaseUuid: row.uuid,
+        orderId: `order_${row.uuid}`,
+        attemptNumber: 1,
+        status: 'READY',
+        confirmIdempotencyKey: randomUUID(),
+        cancelIdempotencyKey: randomUUID(),
+      })),
+    });
+    const adapter = new PaymentAdminPrismaAdapter(database as PrismaService);
+    const listing = new PaymentAdminService({
+      find: (command, policy) =>
+        adapter.find(command, {
+          ...policy,
+          asOf: '2026-10-19T00:00:00Z',
+        }),
+    });
+    const first = await listing.list({ query: group, attention: 'OVERDUE' });
+    expect(first.items).toHaveLength(20);
+    expect(first.nextCursor).not.toBeNull();
+    const second = await listing.list({ query: group, attention: 'OVERDUE', cursor: first.nextCursor! });
+    expect(second.items).toHaveLength(2);
+    expect(second.nextCursor).toBeNull();
+    expect([...first.items, ...second.items].map((row) => row.purchaseUuid)).toEqual(
+      rows
+        .filter((row) => row.overdue)
+        .reverse()
+        .map((row) => row.uuid),
+    );
+    expect([...first.items, ...second.items].every((row) => row.attention === 'OVERDUE')).toBe(true);
+    expect(provider.confirms).toHaveLength(0);
+    expect(provider.cancels).toHaveLength(0);
   });
 });

@@ -20,12 +20,30 @@ const row = {
   status: 'PAID',
   createdAt,
   paidAt: '2026-10-18T11:00:00.654321Z',
+  reviewDueAt: '2026-10-19T10:11:12.123456Z',
+  attention: 'NONE',
   attemptOrderId: 'latest_order',
   attemptStatus: 'DONE',
   attemptMethod: 'CARD',
 };
 
 describe('admin payment list HTTP', () => {
+  it.each(['WAITING', 'DUE_SOON', 'OVERDUE', 'REVIEW_REQUIRED'])(
+    'accepts the management filter %s',
+    async (attention) => {
+      const response = await app.inject({ method: 'GET', url: `${path}?attention=${attention}`, headers });
+      expect(response.statusCode).toBe(200);
+      expect(queryRaw.mock.calls[0][0].values).toContain(attention);
+      expect(response.json().policy).toEqual({ dueHours: 24, soonHours: 6 });
+      expect(forbidden).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(['DONE', '', 'OVERDUE&attention=WAITING'])('rejects an invalid management filter %s', async (attention) => {
+    const response = await app.inject({ method: 'GET', url: `${path}?attention=${attention}`, headers });
+    expect(response.statusCode).toBe(400);
+    expect(queryRaw).not.toHaveBeenCalled();
+  });
   let app: NestFastifyApplication;
   const path = '/api/v1/internal/admin/payments';
   const token = 'admin-payment-list-fixture-token';
@@ -89,10 +107,13 @@ describe('admin payment list HTTP', () => {
           status: 'PAID',
           createdAt,
           paidAt: '2026-10-18T11:00:00.654321Z',
+          reviewDueAt: row.reviewDueAt,
+          attention: 'NONE',
           attempt: { orderId: 'latest_order', status: 'DONE', method: 'CARD' },
         },
       ],
       nextCursor: null,
+      policy: { dueHours: 24, soonHours: 6 },
     });
     expect(forbidden).not.toHaveBeenCalled();
   });

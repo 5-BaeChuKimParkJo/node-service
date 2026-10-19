@@ -1,6 +1,28 @@
 import { PaymentAdminService } from './payment-admin.service';
+import { ConfigService } from '@nestjs/config';
 
 describe('PaymentAdminService', () => {
+  it('uses the server policy and explicitly projects review data without secrets', async () => {
+    const find = vi
+      .fn()
+      .mockResolvedValue([{ ...record, reviewDueAt: '2026-10-19T10:00:00.000001Z', attention: 'OVERDUE' }]);
+    const service = new PaymentAdminService(
+      { find },
+      new ConfigService({ PAYMENT_REVIEW_HOURS: 48, PAYMENT_REVIEW_SOON_HOURS: 12 }),
+    );
+    const result = await service.list({ attention: 'OVERDUE' });
+    expect(find).toHaveBeenCalledWith(
+      { attention: 'OVERDUE' },
+      {
+        dueHours: 48,
+        soonHours: 12,
+        asOf: expect.stringMatching(/Z$/),
+      },
+    );
+    expect(result.policy).toEqual({ dueHours: 48, soonHours: 12 });
+    expect(result.items[0]).toMatchObject({ attention: 'OVERDUE', reviewDueAt: '2026-10-19T10:00:00.000001Z' });
+    expect(JSON.stringify(result)).not.toMatch(/paymentKey|customerKey|operationLeaseToken/);
+  });
   const createdAt = '2026-10-18T10:00:00.000001Z';
   const record = {
     purchaseUuid: '10000000-0000-4000-8000-000000000001',
@@ -11,6 +33,8 @@ describe('PaymentAdminService', () => {
     status: 'PAID' as const,
     createdAt,
     paidAt: createdAt,
+    reviewDueAt: '2026-10-19T10:00:00.000001Z',
+    attention: 'NONE' as const,
     attemptOrderId: 'newest',
     attemptStatus: 'DONE' as const,
     attemptMethod: null,
@@ -33,10 +57,13 @@ describe('PaymentAdminService', () => {
           status: 'PAID',
           createdAt,
           paidAt: createdAt,
+          reviewDueAt: record.reviewDueAt,
+          attention: 'NONE',
           attempt: { orderId: 'newest', status: 'DONE', method: null },
         },
       ],
       nextCursor: null,
+      policy: { dueHours: 24, soonHours: 6 },
     });
   });
 

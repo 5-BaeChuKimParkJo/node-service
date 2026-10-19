@@ -3,7 +3,7 @@
 Disabled by default. Configure `TOSS_PAYMENTS_ENABLED=true`,
 `TOSS_CLIENT_KEY=test_gck_...`, and `TOSS_SECRET_KEY=test_gsk_...` only in the
 auction service environment. Only the authorized CheckoutView exposes the public
-client key. Live keys and the older test_ck_/test_sk_ key family fail validation,
+client key. Live keys and the older `test_ck_`/`test_sk_` key family fail validation,
 including when the feature is disabled. Never put the secret in the browser.
 The customer uses Toss v2 `widgets({ customerKey })` and the order-page widgets;
 its amount comes from the prepared purchase, never the URL or auction UI.
@@ -67,6 +67,29 @@ order name or any attempt order ID), purchase `status`, and UTC creation-time
 `purchaseUuid`, preserves PostgreSQL microseconds, and returns at most 20 items
 with a `nextCursor`. The response includes the latest attempt only; it never
 exposes payment/customer/idempotency keys and never calls Toss or mutates orders.
+
+The optional `attention` filter is applied in SQL before pagination. Every item
+also includes `reviewDueAt` and `attention`; the response echoes the effective
+`policy` (`dueHours`, `soonHours`). This is an advisory operator deadline, not an
+enforced customer payment cutoff:
+
+- `PAYMENT_REVIEW_HOURS` defaults to 24; `PAYMENT_REVIEW_SOON_HOURS` defaults to 6.
+  Both are integer hours from 1 to 168, and the warning window cannot exceed the
+  deadline. Change the auction-service environment and restart to change policy.
+- The deadline is the auction's `endAt` plus the configured hours, not the time
+  the buyer first opened checkout. Classification uses server UTC time and keeps
+  PostgreSQL microsecond precision. At the deadline it is `OVERDUE`; at the
+  warning boundary (inclusive) it is `DUE_SOON`; otherwise it is `WAITING`.
+- CANCELED purchases are `NONE`. A latest-attempt error or CONFIRMING, UNKNOWN,
+  CANCELING or WAITING_FOR_DEPOSIT is `REVIEW_REQUIRED` before deadline checks,
+  even when the purchase is PAID (for example, uncertain cancellation). Settled
+  paid purchases without those conditions are `NONE`.
+- Only already-created purchase orders are covered. Winners who never opened
+  checkout are not included. Search/date filters retain their existing meaning.
+- This read path never reconciles, cancels, blocks a charge, changes financial
+  state or schedules work. Changing the policy recomputes historical labels; it
+  does not rewrite deadlines or payment attempts in the database. Use the existing
+  explicit detail reconciliation for uncertain results before operator action.
 
 Prepare reuses the existing attempt; only verified ABORTED/EXPIRED attempts may
 be replaced. Hidden/deleted/canceled auctions are checked again on every prepare.
@@ -133,9 +156,11 @@ $env:TEST_DATABASE_URL = 'postgresql://test:test@127.0.0.1:5432/auction_test'
 npm run test:payment:integration
 ```
 
-The 13 database cases cover simultaneous prepares, checkout-versus-bid row
+The 15 database cases cover simultaneous prepares, checkout-versus-bid row
 contention, order-list pagination, duplicate confirmations, expired leases,
-and rollback of bid/outbox writes. Seven of these cases exercise the actual
+rollback of bid/outbox writes, and advisory deadline boundaries with unresolved
+payment precedence. Filtered pagination also covers 44 interleaved purchases
+with tied creation timestamps. Seven of these cases exercise the actual
 HTTP controllers, authentication, application service and Prisma adapter:
 
 - Concurrent confirmations and cancellations across independent app/database
@@ -150,7 +175,7 @@ HTTP controllers, authentication, application service and Prisma adapter:
 Only the external provider is replaced with a deterministic test double. These
 tests never call Toss and do not prove provider-side idempotency or real network
 failure behavior. Fixtures use unique auction IDs and delete only their own
-rows. Unit-only runs visibly skip all 13 cases without an explicit test database.
+rows. Unit-only runs visibly skip all 15 cases without an explicit test database.
 Node Quality provisions PostgreSQL in CI and runs both suites before any service
 image can be published.
 

@@ -19,6 +19,7 @@ const listRequest = z
   .object({
     query: z.string().trim().max(100).optional(),
     status: z.enum(['AWAITING_PAYMENT', 'PAID', 'CANCELED']).optional(),
+    attention: z.enum(['WAITING', 'DUE_SOON', 'OVERDUE', 'REVIEW_REQUIRED']).optional(),
     from: utcTimestamp.optional(),
     to: utcTimestamp.optional(),
     createdAt: utcTimestamp.optional(),

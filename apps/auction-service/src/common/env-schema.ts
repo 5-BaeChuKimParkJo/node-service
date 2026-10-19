@@ -6,6 +6,8 @@ export const envSchema = z
     MEMBER_SERVICE: z.string(),
     JWT_SECRET: z.string().min(32),
     ADMIN_INTERNAL_TOKEN: z.string().min(24),
+    PAYMENT_REVIEW_HOURS: z.coerce.number().int().min(1).max(168).default(24),
+    PAYMENT_REVIEW_SOON_HOURS: z.coerce.number().int().min(1).max(168).default(6),
     TOSS_PAYMENTS_ENABLED: z
       .union([z.boolean(), z.enum(['true', 'false']).transform((value) => value === 'true')])
       .default(false),
@@ -25,6 +27,13 @@ export const envSchema = z
     ),
   })
   .superRefine((config, ctx) => {
+    if (config.PAYMENT_REVIEW_SOON_HOURS > config.PAYMENT_REVIEW_HOURS) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['PAYMENT_REVIEW_SOON_HOURS'],
+        message: 'Review warning window must not exceed the deadline',
+      });
+    }
     if (config.TOSS_PAYMENTS_ENABLED && (!config.TOSS_CLIENT_KEY || !config.TOSS_SECRET_KEY)) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
