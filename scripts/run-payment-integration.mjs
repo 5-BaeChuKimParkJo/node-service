@@ -11,7 +11,9 @@ try {
   };
   run(['node_modules/prisma/build/index.js', 'migrate', 'deploy', '--schema=apps/auction-service/src/prisma/schema/schema.prisma']);
   if (!process.argv.includes('--migrate-only')) {
-    run(['node_modules/vitest/vitest.mjs', 'run', 'apps/auction-service/src/payment/adapter/out/persistence/payment-concurrency.integration.spec.ts']);
+    run(['node_modules/vitest/vitest.mjs', 'run',
+      'apps/auction-service/src/payment/adapter/out/persistence/payment-concurrency.integration.spec.ts',
+      'apps/auction-service/src/payment/adapter/out/persistence/payment-recovery.integration.spec.ts']);
   }
 } catch (error) {
   console.error(error.message);

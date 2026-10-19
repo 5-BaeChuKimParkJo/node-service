@@ -133,11 +133,26 @@ $env:TEST_DATABASE_URL = 'postgresql://test:test@127.0.0.1:5432/auction_test'
 npm run test:payment:integration
 ```
 
-The suite covers simultaneous prepares, checkout-versus-bid row contention,
-duplicate confirmations, expired leases, and rollback of bid/outbox writes.
-It uses a fake provider and never calls Toss. Unit-only runs visibly skip these
-five tests without an explicit test database. Node Quality provisions PostgreSQL
-in CI and runs the suite before any service image can be published.
+The 13 database cases cover simultaneous prepares, checkout-versus-bid row
+contention, order-list pagination, duplicate confirmations, expired leases,
+and rollback of bid/outbox writes. Seven of these cases exercise the actual
+HTTP controllers, authentication, application service and Prisma adapter:
+
+- Concurrent confirmations and cancellations across independent app/database
+  clients invoke the provider once and preserve the first cancellation metadata.
+- Lost confirm/cancel responses recover by provider lookup after app/client
+  recreation, without replaying an already completed action.
+- Requests lost before the provider are retried with the persisted idempotency
+  key and original cancellation reason after app/client recreation.
+- Forged, duplicate and reordered webhooks use only the stored payment key;
+  even a stale DONE provider read cannot revive a canceled purchase.
+
+Only the external provider is replaced with a deterministic test double. These
+tests never call Toss and do not prove provider-side idempotency or real network
+failure behavior. Fixtures use unique auction IDs and delete only their own
+rows. Unit-only runs visibly skip all 13 cases without an explicit test database.
+Node Quality provisions PostgreSQL in CI and runs both suites before any service
+image can be published.
 
 Payment state lives in `domain`; the application depends only on
 `PaymentStorePort` and `PaymentProviderPort`. `PaymentPrismaAdapter` owns row

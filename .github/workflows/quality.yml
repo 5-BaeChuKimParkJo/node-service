@@ -51,7 +51,7 @@ jobs:
       - run: npm run check:architecture
       - run: npm run check:format
       - run: npm run test:unit
-      - name: Verify real PostgreSQL contention without a payment provider
+      - name: Verify payment HTTP recovery and contention on PostgreSQL
         env:
           TEST_DATABASE_URL: postgresql://test:test@127.0.0.1:5432/auction_test
         run: npm run test:payment:integration
