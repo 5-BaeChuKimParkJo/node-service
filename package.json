@@ -1,6 +1,7 @@
 {
   "name": "cncn-api",
   "version": "0.0.1",
+  "packageManager": "npm@10.9.4",
   "description": "",
   "author": "",
   "private": true,

@@ -3,6 +3,15 @@
 Date: 2026-10-20. Baseline: `442bac2`. Package manager: npm, with
 `package-lock.json` used by CI and the Docker build. Counts below are vulnerable
 package entries reported by npm, not unique CVEs or the GitHub alert count.
+Generate the lock with npm 10.9.4, matching the CI toolchain. npm 11 produced a
+peer placement that passed its own clean-install check but omitted a nested
+Webpack entry required by npm 10. The CI-equivalent dry-run reproduced the failure;
+regenerating with npm 10 added that entry without changing dependency versions.
+
+```powershell
+npx --yes npm@10.9.4 install --package-lock-only --ignore-scripts --no-audit
+npx --yes npm@10.9.4 ci --ignore-scripts --dry-run --no-audit
+```
 
 | Scope      | State  | Low | Moderate | High | Critical | Total |
 | ---------- | ------ | --: | -------: | ---: | -------: | ----: |
