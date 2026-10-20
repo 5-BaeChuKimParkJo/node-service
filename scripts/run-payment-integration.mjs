@@ -13,7 +13,8 @@ try {
   if (!process.argv.includes('--migrate-only')) {
     run(['node_modules/vitest/vitest.mjs', 'run',
       'apps/auction-service/src/payment/adapter/out/persistence/payment-concurrency.integration.spec.ts',
-      'apps/auction-service/src/payment/adapter/out/persistence/payment-recovery.integration.spec.ts']);
+      'apps/auction-service/src/payment/adapter/out/persistence/payment-recovery.integration.spec.ts',
+      'apps/auction-service/src/auction/adapter/out/postgresql/popular-auction-prisma.integration.spec.ts']);
   }
 } catch (error) {
   console.error(error.message);

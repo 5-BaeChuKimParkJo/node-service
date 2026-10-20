@@ -195,8 +195,9 @@ tests never call Toss and do not prove provider-side idempotency or real network
 failure behavior. Fixtures use unique auction IDs and delete only their own
 rows. They also verify unified administrator history across source ties and
 cancellation-result updates. Unit-only runs visibly skip all 23 cases without an
-explicit test database.
-Node Quality provisions PostgreSQL in CI and runs both suites before any service
+explicit test database. The same runner additionally verifies six popular-auction
+database cases, for 29 isolated database cases overall.
+Node Quality provisions PostgreSQL in CI and runs all three suites before any service
 image can be published.
 
 ## Operations Summary

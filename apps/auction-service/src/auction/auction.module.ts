@@ -16,6 +16,13 @@ import { AdminHistoryController } from './adapter/in/web/admin-history.controlle
 import { AdminHistoryService } from './application/service/admin-history.service';
 import { AdminHistoryQueryPort } from './application/port/out/admin-history-query.port';
 import { AdminHistoryPrismaAdapter } from './adapter/out/postgresql/admin-history-prisma.adapter';
+import { PopularAuctionService } from './application/service/popular-auction.service';
+import { PopularAuctionRepositoryPort } from './application/port/out/popular-auction-repository.port';
+import { PopularAuctionCachePort } from './application/port/out/popular-auction-cache.port';
+import { PopularAuctionPrismaAdapter } from './adapter/out/postgresql/popular-auction-prisma.adapter';
+import { PopularAuctionRedisAdapter } from './adapter/out/redis/popular-auction-redis.adapter';
+import { PopularAuctionsController } from './adapter/in/web/popular-auctions.controller';
+import { PopularAuctionScheduler } from './adapter/in/scheduling/popular-auction-scheduler';
 
 @Module({
   providers: [
@@ -26,8 +33,18 @@ import { AdminHistoryPrismaAdapter } from './adapter/out/postgresql/admin-histor
     InternalAdminTokenGuard,
     AdminHistoryService,
     { provide: AdminHistoryQueryPort, useClass: AdminHistoryPrismaAdapter },
+    PopularAuctionService,
+    PopularAuctionScheduler,
+    { provide: PopularAuctionRepositoryPort, useClass: PopularAuctionPrismaAdapter },
+    { provide: PopularAuctionCachePort, useClass: PopularAuctionRedisAdapter },
   ],
-  controllers: [AuctionController, AuctionMediaController, AuctionAdminController, AdminHistoryController],
+  controllers: [
+    PopularAuctionsController,
+    AuctionController,
+    AuctionMediaController,
+    AuctionAdminController,
+    AdminHistoryController,
+  ],
   imports: [PrismaModule, S3Module, KafkaModule, RedisModule, TaxonomyModule],
 })
 export class AuctionModule {}

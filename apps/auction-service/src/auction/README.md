@@ -1,3 +1,42 @@
+# Popular Auctions
+
+`GET /api/v1/auctions/popular` is public. It returns up to ten currently active,
+visible, non-deleted, unsold auctions with activity in the last 24 hours. The
+score is distinct viewers plus five times distinct bidders in `[asOf - 24h, asOf)`.
+Seller activity, soft-deleted bids and nonpositive bid amounts do not count.
+Repeated views/bids by one identity contribute once per signal. Aggregate the
+signals separately to avoid multiplying counts when joining them. Ties use
+bidder count, viewer count, earlier ending time, then auction UUID.
+
+The existing auction-service scheduler replaces a Redis score/ID snapshot every
+five minutes. Cold or expired reads aggregate on demand, with one in-flight
+aggregation per process. Each cache operation has a one-second wait limit.
+Redis failures fall back to PostgreSQL; database failures
+remain errors rather than fabricated rankings. Cached scores expire after five
+minutes. Every response rechecks live eligibility and reads current title, price
+and image, so closing or hiding a cached auction removes it immediately. The list
+may temporarily contain fewer than ten entries until its next aggregation.
+Money, counts and scores are decimal strings; rank is a number. `generatedAt`
+is the score snapshot time, not the live listing lookup time. No activity returns
+an empty ranking; the separate latest-auction section remains available.
+
+`POST /api/v1/auctions/:auctionUuid/views` returns 204. A valid access token uses
+its signed member UUID, not a body-supplied identity. Without authorization the
+body must contain a UUID `visitorUuid`; the customer frontend creates it in an
+HttpOnly browser cookie via a server action. Only active public auctions accept
+view records, and seller views are ignored. The browser calls this after mounting
+a successful detail page, not during server rendering or link prefetching. A
+tracking error must not block reading or bidding. This endpoint appends raw view
+records; ranking deduplication happens in SQL. Existing Kafka view records remain
+compatible and replayed duplicates cannot inflate the distinct-viewer score.
+
+Anonymous identity is approximate: clearing cookies or switching browsers creates
+a new identity, and anonymous/login activity cannot be reliably merged. This is
+not an anti-fraud system. The first version does not add bot filtering, device
+fingerprinting, a separate ranking service or retention jobs. Recent-window
+indexes are added by Prisma migration. The guarded PostgreSQL integration runner
+also tests ranking windows, deduplication, eligibility, ties and exact money.
+
 # Administrator History
 
 `GET /api/v1/internal/admin/history` is a read-only, internal-token-protected

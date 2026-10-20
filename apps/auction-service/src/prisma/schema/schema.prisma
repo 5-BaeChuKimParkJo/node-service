@@ -149,6 +149,7 @@ model AuctionBidders {
   auction   Auctions @relation(fields: [auctionId], references: [auctionId])
 
   @@index([auctionId])
+  @@index([createdAt, auctionId, bidderUuid])
 }
 
 model Outbox {
@@ -170,6 +171,8 @@ model AuctionViewed {
   viewedAt        DateTime @db.Timestamptz(6)
 
   createdAt DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([viewedAt, auctionUuid, viewerUuid])
 }
 
 model Category {
