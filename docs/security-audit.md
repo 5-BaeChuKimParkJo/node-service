@@ -13,12 +13,14 @@ npx --yes npm@10.9.4 install --package-lock-only --ignore-scripts --no-audit
 npx --yes npm@10.9.4 ci --ignore-scripts --dry-run --no-audit
 ```
 
-| Scope      | State  | Low | Moderate | High | Critical | Total |
-| ---------- | ------ | --: | -------: | ---: | -------: | ----: |
-| Full       | Before |   6 |       43 |   41 |        8 |    98 |
-| Full       | After  |   2 |       16 |   22 |        2 |    42 |
-| Production | Before |   1 |       27 |   18 |        4 |    50 |
-| Production | After  |   0 |        0 |    3 |        0 |     3 |
+| Scope      | State                        | Low | Moderate | High | Critical | Total |
+| ---------- | ---------------------------- | --: | -------: | ---: | -------: | ----: |
+| Full       | Before                       |   6 |       43 |   41 |        8 |    98 |
+| Full       | Compatible patches           |   2 |       16 |   22 |        2 |    42 |
+| Full       | After approved major upgrade |   2 |       16 |   19 |        2 |    39 |
+| Production | Before                       |   1 |       27 |   18 |        4 |    50 |
+| Production | Compatible patches           |   0 |        0 |    3 |        0 |     3 |
+| Production | After approved major upgrade |   0 |        0 |    0 |        0 |     0 |
 
 ## Compatible Patches
 
@@ -41,16 +43,20 @@ npx --yes npm@10.9.4 ci --ignore-scripts --dry-run --no-audit
 
 ## Remaining Exposure
 
-The production audit still reports three high package entries: @fastify/static
-8.2.0, @nestjs/platform-fastify 11.1.3, and its nested Fastify 5.3.3. A newer
-direct Fastify does not replace the adapter's pinned copy; `npm ls` must inspect
-both paths. Do not interpret the direct version as proof that the adapter is fixed.
+The approved follow-up upgrades @fastify/static from 8.2.0 to 10.1.6 and the
+Nest Fastify adapter from 11.1.3 to 11.2.7, retaining Nest major 11. The latter
+requires @fastify/static 10.1.2 or newer and still pins Fastify 5.11.3. A scoped
+`@nestjs/platform-fastify > fastify: $fastify` override applies the same major-5
+patched range as the direct dependency. `npm ls --omit=dev` confirms both paths
+deduplicate to Fastify 5.12.7, with no invalid packages. A direct version alone
+would not fix the adapter's nested copy.
 
-The latest Nest 11 Fastify adapter requires @fastify/static 10.1.2 or newer.
 The [static maintainer advisory](https://github.com/fastify/fastify-static/security/advisories/GHSA-8pvw-jcv7-9cmj)
-has no fixed version in major 8. Upgrading that library from 8 to 10 and then
-updating the Nest adapter remains pending explicit approval and Swagger/HTTP
-regression validation. No force or legacy-peer-deps install is used.
+has no fixed version in major 8. The production audit now reports zero findings;
+the real Swagger HTTP/HTML/CSS compatibility test covers the major upgrade.
+No force or legacy-peer-deps install is used. No database or API contract changes
+are needed. The production container already uses Node 22, as required by the
+new static library's transitive content-disposition dependency.
 
 The full audit also retains two critical entries, Vitest and Tinypool, absent
 from the production graph. Vitest 3's remaining findings require a test-runner
@@ -76,8 +82,8 @@ npm run test:unit
 npm run build:all
 ```
 
-Both audit commands intentionally still return exit code 1 for the documented
-remaining entries. This is a dependency audit, not a container OS/global-tool
+The production audit returns exit code 0; the full audit still returns exit code
+1 for the documented development entries. This is a dependency audit, not a container OS/global-tool
 scan or a penetration test; it does not certify the entire system as secure.
 
 Local Node is 25.8.2 on Windows. The Kafka client has no matching prebuilt binary
@@ -91,6 +97,10 @@ CI now explicitly loads the Kafka native binding on Linux after `npm ci`; the
 production Docker stage repeats the load after pruning development packages.
 Neither check connects to a broker. A separate Fastify HTTP test verifies the
 generated Swagger document, UI HTML and real CSS asset remain available.
+Follow-up local validation: 268 unit tests, 18 checker tests, architecture/naming/
+format checks and all four Nest application builds passed. The 29 guarded
+PostgreSQL tests are skipped locally and must pass against the isolated CI
+database before publication.
 
 The existing guarded PostgreSQL suite must run on an isolated CI database, not
 production or Tailscale database addresses. CI/deployment evidence is recorded
