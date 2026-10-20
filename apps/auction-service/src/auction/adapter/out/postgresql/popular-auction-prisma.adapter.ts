@@ -44,7 +44,7 @@ export class PopularAuctionPrismaAdapter extends PopularAuctionRepositoryPort {
       )
       SELECT "auctionUuid", viewers::text AS "uniqueViewers", bidders::text AS "uniqueBidders", score::text AS score
       FROM scores WHERE score > 0
-      ORDER BY score DESC, bidders DESC, viewers DESC, "endAt" ASC, "auctionUuid" ASC
+      ORDER BY scores.score DESC, scores.bidders DESC, scores.viewers DESC, scores."endAt" ASC, scores."auctionUuid" ASC
       LIMIT 10
     `);
   }
