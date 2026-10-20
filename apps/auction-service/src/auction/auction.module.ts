@@ -23,6 +23,11 @@ import { PopularAuctionPrismaAdapter } from './adapter/out/postgresql/popular-au
 import { PopularAuctionRedisAdapter } from './adapter/out/redis/popular-auction-redis.adapter';
 import { PopularAuctionsController } from './adapter/in/web/popular-auctions.controller';
 import { PopularAuctionScheduler } from './adapter/in/scheduling/popular-auction-scheduler';
+import { ConfigService } from '@nestjs/config';
+import { DemoAuctionService } from './application/service/demo-auction.service';
+import { DemoAuctionController } from './adapter/in/web/demo-auction.controller';
+import { AuctionRepositoryPort } from './application/port/out/auction-repository.port';
+import { CreateAuctionUseCase } from './application/port/in/create-auction.use-case';
 
 @Module({
   providers: [
@@ -31,6 +36,12 @@ import { PopularAuctionScheduler } from './adapter/in/scheduling/popular-auction
     ...mapperProviders,
     ...auctionMessageHandlerProviders,
     InternalAdminTokenGuard,
+    {
+      provide: DemoAuctionService,
+      useFactory: (repository: AuctionRepositoryPort, creator: CreateAuctionUseCase, config: ConfigService) =>
+        new DemoAuctionService(repository, creator, config.get<string>('DEMO_AUCTION_TEMPLATE_UUID', '')),
+      inject: [AuctionRepositoryPort, CreateAuctionUseCase, ConfigService],
+    },
     AdminHistoryService,
     { provide: AdminHistoryQueryPort, useClass: AdminHistoryPrismaAdapter },
     PopularAuctionService,
@@ -43,6 +54,7 @@ import { PopularAuctionScheduler } from './adapter/in/scheduling/popular-auction
     AuctionController,
     AuctionMediaController,
     AuctionAdminController,
+    DemoAuctionController,
     AdminHistoryController,
   ],
   imports: [PrismaModule, S3Module, KafkaModule, RedisModule, TaxonomyModule],
