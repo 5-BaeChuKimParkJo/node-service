@@ -33,6 +33,7 @@ RUN npm install
 COPY apps/auction-service/src/prisma/schema apps/auction-service/src/prisma/schema
 RUN npx prisma generate --schema=apps/auction-service/src/prisma/schema/schema.prisma
 RUN npm prune --prod
+RUN node -e "require('@confluentinc/kafka-javascript')"
 
 COPY --from=development /usr/src/app/dist ./dist
 
