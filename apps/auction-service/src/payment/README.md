@@ -172,7 +172,7 @@ $env:TEST_DATABASE_URL = 'postgresql://test:test@127.0.0.1:5432/auction_test'
 npm run test:payment:integration
 ```
 
-The 21 database cases cover simultaneous prepares, checkout-versus-bid row
+The 23 database cases cover simultaneous prepares, checkout-versus-bid row
 contention, order-list pagination, duplicate confirmations, expired leases,
 rollback of bid/outbox writes, and advisory deadline boundaries with unresolved
 payment precedence. Filtered pagination also covers 44 interleaved purchases
@@ -193,7 +193,9 @@ HTTP controllers, authentication, application service and Prisma adapter:
 Only the external provider is replaced with a deterministic test double. These
 tests never call Toss and do not prove provider-side idempotency or real network
 failure behavior. Fixtures use unique auction IDs and delete only their own
-rows. Unit-only runs visibly skip all 21 cases without an explicit test database.
+rows. They also verify unified administrator history across source ties and
+cancellation-result updates. Unit-only runs visibly skip all 23 cases without an
+explicit test database.
 Node Quality provisions PostgreSQL in CI and runs both suites before any service
 image can be published.
 

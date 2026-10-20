@@ -11,6 +11,10 @@ import { AuctionAdminMapper } from '../../../application/mapper/auction-admin.ma
 import { AuctionRepositoryPort } from '../../../application/port/out/auction-repository.port';
 import { AuctionPrismaAdapter } from '../../out/postgresql/auction-prisma.adapter';
 import AdminAuction from '../../../domain/model/admin-auction';
+import { AdminHistoryController } from './admin-history.controller';
+import { AdminHistoryService } from '../../../application/service/admin-history.service';
+import { AdminHistoryQueryPort } from '../../../application/port/out/admin-history-query.port';
+import { AdminHistoryPrismaAdapter } from '../../out/postgresql/admin-history-prisma.adapter';
 
 const auctionUuid = '10000000-0000-0000-0000-000000000000';
 const auctionBidderUuid = '20000000-0000-0000-0000-000000000000';
@@ -20,6 +24,140 @@ const path = `/api/v1/internal/admin/auctions/${auctionUuid}/bids`;
 const createdAt = '2026-10-13T02:34:56.123456Z';
 
 describe('AuctionAdminController bid history HTTP contract', () => {
+  it('lists safe unified history without truncating money or microsecond timestamps', async () => {
+    tx.$queryRaw.mockResolvedValue([
+      {
+        entryKey: `auction:${auctionBidderUuid}`,
+        occurredAt: createdAt,
+        auctionUuid,
+        auctionTitle: 'Current title',
+        actor: 'operator',
+        action: 'hide',
+        reason: 'Review',
+        status: 'SUCCEEDED',
+        previousStatus: 'active',
+        nextStatus: 'hidden',
+        amount: null,
+        paymentKey: 'private',
+        operationLeaseToken: 'private',
+      },
+      {
+        entryKey: 'payment:cancel_order_1',
+        occurredAt: createdAt,
+        auctionUuid,
+        auctionTitle: 'Current title',
+        actor: null,
+        action: 'payment-cancel',
+        reason: null,
+        status: 'PENDING',
+        previousStatus: null,
+        nextStatus: null,
+        amount: 9007199254740993n,
+        cancelIdempotencyKey: 'private',
+      },
+    ]);
+    const response = await app.inject({
+      method: 'GET',
+      url: '/api/v1/internal/admin/history',
+      headers: { 'x-admin-internal-token': token },
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({
+      items: [
+        {
+          entryKey: `auction:${auctionBidderUuid}`,
+          occurredAt: createdAt,
+          auctionUuid,
+          auctionTitle: 'Current title',
+          actor: 'operator',
+          action: 'hide',
+          reason: 'Review',
+          status: 'SUCCEEDED',
+          previousStatus: 'active',
+          nextStatus: 'hidden',
+          amount: null,
+        },
+        {
+          entryKey: 'payment:cancel_order_1',
+          occurredAt: createdAt,
+          auctionUuid,
+          auctionTitle: 'Current title',
+          actor: null,
+          action: 'payment-cancel',
+          reason: null,
+          status: 'PENDING',
+          previousStatus: null,
+          nextStatus: null,
+          amount: '9007199254740993',
+        },
+      ],
+      nextCursor: null,
+    });
+    expect(tx.$queryRaw).toHaveBeenCalledTimes(1);
+  });
+
+  it('requires the internal token for unified history', async () => {
+    expect((await app.inject({ method: 'GET', url: '/api/v1/internal/admin/history' })).statusCode).toBe(401);
+    expect(tx.$queryRaw).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    'action=cancel',
+    'action=hide&action=restore',
+    'auctionUuid=invalid',
+    'from=2026-02-30T00:00:00Z',
+    'from=2026-10-20T00:00:00Z&to=2026-10-19T00:00:00Z',
+    `occurredAt=${createdAt}`,
+    'entryKey=payment:order_1',
+    `occurredAt=${createdAt}&entryKey=invalid`,
+  ])('rejects malformed history filters: %s', async (query) => {
+    const response = await app.inject({
+      method: 'GET',
+      url: `/api/v1/internal/admin/history?${query}`,
+      headers: { 'x-admin-internal-token': token },
+    });
+    expect(response.statusCode).toBe(400);
+    expect(tx.$queryRaw).not.toHaveBeenCalled();
+  });
+
+  it('applies exact history filters and uses the twentieth result as the continuation cursor', async () => {
+    tx.$queryRaw.mockResolvedValue(
+      Array.from({ length: 21 }, (_, i) => ({
+        entryKey: `payment:order_${30 - i}`,
+        occurredAt: createdAt,
+        auctionUuid,
+        auctionTitle: null,
+        actor: 'operator',
+        action: 'payment-cancel',
+        reason: 'Other',
+        status: 'SUCCEEDED',
+        previousStatus: null,
+        nextStatus: null,
+        amount: 10000n,
+      })),
+    );
+    const params = new URLSearchParams({
+      action: 'payment-cancel',
+      auctionUuid,
+      from: '2026-10-01T00:00:00Z',
+      to: '2026-10-21T00:00:00Z',
+      occurredAt: createdAt,
+      entryKey: 'payment:order_99',
+    });
+    const response = await app.inject({
+      method: 'GET',
+      url: `/api/v1/internal/admin/history?${params}`,
+      headers: { 'x-admin-internal-token': token },
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.json().items).toHaveLength(20);
+    expect(response.json().nextCursor).toEqual({ occurredAt: createdAt, entryKey: 'payment:order_11' });
+    const sql = tx.$queryRaw.mock.calls[0][0];
+    for (const value of params.values()) expect(sql.values).toContain(value);
+    expect(sql.text).toContain('UNION ALL');
+    expect(sql.text).toContain('LIMIT 21');
+  });
+
   let app: NestFastifyApplication;
   let repository: AuctionPrismaAdapter;
   const tx = {
@@ -32,9 +170,11 @@ describe('AuctionAdminController bid history HTTP contract', () => {
     const prisma = { $transaction: async (callback: (client: typeof tx) => Promise<unknown>) => callback(tx) };
     repository = new AuctionPrismaAdapter(prisma as never, {} as never, {} as never);
     const module = await Test.createTestingModule({
-      controllers: [AuctionAdminController],
+      controllers: [AuctionAdminController, AdminHistoryController],
       providers: [
         AuctionAdminService,
+        AdminHistoryService,
+        { provide: AdminHistoryQueryPort, useValue: new AdminHistoryPrismaAdapter(tx as never) },
         InternalAdminTokenGuard,
         { provide: ConfigService, useValue: new ConfigService({ ADMIN_INTERNAL_TOKEN: token }) },
         { provide: AuctionAdminMapper, useValue: new AuctionAdminMapper({ toFullUrl: (key: string) => key } as never) },

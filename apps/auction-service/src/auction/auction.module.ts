@@ -12,6 +12,10 @@ import { TaxonomyModule } from '../taxonomy/taxonomy.module';
 import { AuctionMediaController } from './adapter/in/web/auction-media.controller';
 import { AuctionAdminController } from './adapter/in/web/auction-admin.controller';
 import { InternalAdminTokenGuard } from './adapter/in/web/internal-admin-token.guard';
+import { AdminHistoryController } from './adapter/in/web/admin-history.controller';
+import { AdminHistoryService } from './application/service/admin-history.service';
+import { AdminHistoryQueryPort } from './application/port/out/admin-history-query.port';
+import { AdminHistoryPrismaAdapter } from './adapter/out/postgresql/admin-history-prisma.adapter';
 
 @Module({
   providers: [
@@ -20,8 +24,10 @@ import { InternalAdminTokenGuard } from './adapter/in/web/internal-admin-token.g
     ...mapperProviders,
     ...auctionMessageHandlerProviders,
     InternalAdminTokenGuard,
+    AdminHistoryService,
+    { provide: AdminHistoryQueryPort, useClass: AdminHistoryPrismaAdapter },
   ],
-  controllers: [AuctionController, AuctionMediaController, AuctionAdminController],
+  controllers: [AuctionController, AuctionMediaController, AuctionAdminController, AdminHistoryController],
   imports: [PrismaModule, S3Module, KafkaModule, RedisModule, TaxonomyModule],
 })
 export class AuctionModule {}

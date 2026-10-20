@@ -10,6 +10,8 @@ import { PaymentAdminPrismaAdapter } from './payment-admin-prisma.adapter';
 import { PaymentAdminService } from '../../../application/service/payment-admin.service';
 import { FakePaymentProvider, buyerUuid, sellerUuid } from '../../../payment.test-fixtures';
 import { requireTestDatabaseUrl } from '../../../../../../../scripts/test-database.mjs';
+import { AdminHistoryPrismaAdapter } from '../../../../auction/adapter/out/postgresql/admin-history-prisma.adapter';
+import { AdminHistoryService } from '../../../../auction/application/service/admin-history.service';
 
 const url = process.env.TEST_DATABASE_URL ? requireTestDatabaseUrl(process.env.TEST_DATABASE_URL) : undefined;
 
@@ -67,6 +69,7 @@ describe.skipIf(!url)('payment concurrency on isolated PostgreSQL', () => {
     await database.auctionPurchase.deleteMany({ where: { auctionUuid: { in: fixtures } } });
     await database.auctionBidders.deleteMany({ where: { auction: { auctionUuid: uuid } } });
     await database.outbox.deleteMany({ where: { aggregateId: uuid } });
+    await database.auctionAdminActions.deleteMany({ where: { auctionUuid: { in: fixtures } } });
     await database.auctions.deleteMany({ where: { auctionUuid: { in: fixtures } } });
   });
   afterAll(async () => {
@@ -80,6 +83,103 @@ describe.skipIf(!url)('payment concurrency on isolated PostgreSQL', () => {
     expect(new Set(views.map((view) => view.purchase!.attempt!.orderId)).size).toBe(1);
     expect(await database.auctionPurchase.count({ where: { auctionUuid: uuid } })).toBe(1);
     expect((await store.read(uuid)).purchase!.attempts).toHaveLength(1);
+  });
+
+  it('paginates unified history across source ties without losing microseconds or exact amounts', async () => {
+    const ids = Array.from({ length: 24 }, () => randomUUID());
+    await database.auctionAdminActions.createMany({
+      data: ids.map((id) => ({
+        auctionAdminActionId: id,
+        auctionUuid: uuid,
+        actor: 'operator',
+        action: 'hide',
+        reason: 'History fixture',
+        previousStatus: 'active',
+        nextStatus: 'hidden',
+      })),
+    });
+    await database.$executeRaw`UPDATE "AuctionAdminActions" SET "createdAt" = '2026-10-13T02:34:56.123456Z'::timestamptz WHERE "auctionUuid" = ${uuid}::uuid`;
+    await database.$executeRaw`UPDATE "AuctionAdminActions" SET "createdAt" = '2026-10-13T02:34:56.123457Z'::timestamptz WHERE "auctionAdminActionId" = ${ids[0]}::uuid`;
+    const prepared = await service.prepare(uuid, buyerUuid);
+    const orderId = prepared.purchase!.attempt!.orderId;
+    await database.auctionPurchase.update({ where: { auctionUuid: uuid }, data: { amount: 9007199254740993n } });
+    await database.$executeRaw`UPDATE "AuctionPaymentAttempt" SET "cancelRequestedAt" = '2026-10-13T02:34:56.123456Z'::timestamptz, "status" = 'CANCELING' WHERE "orderId" = ${orderId}`;
+    const history = new AdminHistoryService(new AdminHistoryPrismaAdapter(database as PrismaService));
+    const first = await history.list({ auctionUuid: uuid });
+    expect(first.items).toHaveLength(20);
+    expect(first.items[0]).toMatchObject({ entryKey: `auction:${ids[0]}`, occurredAt: '2026-10-13T02:34:56.123457Z' });
+    expect(first.items[1]).toMatchObject({
+      entryKey: `payment:${orderId}`,
+      occurredAt: '2026-10-13T02:34:56.123456Z',
+      amount: '9007199254740993',
+      status: 'PENDING',
+    });
+    const second = await history.list({ auctionUuid: uuid, cursor: first.nextCursor! });
+    expect(second.items).toHaveLength(5);
+    expect(second.nextCursor).toBeNull();
+    const keys = [...first.items, ...second.items].map((entry) => entry.entryKey);
+    expect(new Set(keys).size).toBe(25);
+    expect(new Set(keys)).toEqual(new Set([...ids.map((id) => `auction:${id}`), `payment:${orderId}`]));
+    expect(
+      (
+        await history.list({
+          auctionUuid: uuid,
+          from: '2026-10-13T02:34:56.123456Z',
+          to: '2026-10-13T02:34:56.123457Z',
+          action: 'payment-cancel',
+        })
+      ).items,
+    ).toHaveLength(1);
+    expect((await history.list({ auctionUuid: uuid, from: '2026-10-13T02:34:56.123457Z' })).items).toHaveLength(1);
+    expect(provider.confirms).toHaveLength(0);
+    expect(provider.cancels).toHaveLength(0);
+  });
+
+  it('keeps cancellation identity and original request time while reflecting its current result', async () => {
+    const history = new AdminHistoryService(new AdminHistoryPrismaAdapter(database as PrismaService));
+    const prepared = await service.prepare(uuid, buyerUuid);
+    const orderId = prepared.purchase!.attempt!.orderId;
+    expect((await history.list({ auctionUuid: uuid })).items).toHaveLength(0);
+    await database.auctionPaymentAttempt.update({
+      where: { orderId },
+      data: {
+        status: 'CANCELING',
+        cancelRequestedAt: new Date('2026-10-13T00:00:00Z'),
+        cancelReason: '구매자 요청',
+        cancelActor: 'operator',
+      },
+    });
+    const pending = (await history.list({ auctionUuid: uuid })).items[0];
+    expect(pending).toMatchObject({
+      entryKey: `payment:${orderId}`,
+      status: 'PENDING',
+      occurredAt: '2026-10-13T00:00:00.000000Z',
+    });
+    await database.auctionPaymentAttempt.update({ where: { orderId }, data: { status: 'CANCELED' } });
+    await database.auctions.update({ where: { auctionUuid: uuid }, data: { status: 'hidden', deletedAt: new Date() } });
+    const result = await history.list({ auctionUuid: uuid, action: 'payment-cancel' });
+    expect(result.items).toEqual([{ ...pending, status: 'SUCCEEDED' }]);
+    expect(
+      await database.auctionPaymentAttempt.count({ where: { purchaseUuid: prepared.purchase!.purchaseUuid } }),
+    ).toBe(1);
+    const orphan = randomUUID();
+    extraUuids.push(orphan);
+    await database.auctionAdminActions.create({
+      data: {
+        auctionUuid: orphan,
+        actor: 'legacy',
+        action: 'hide',
+        reason: 'Retained audit',
+        previousStatus: 'active',
+        nextStatus: 'hidden',
+      },
+    });
+    expect((await history.list({ auctionUuid: orphan })).items[0]).toMatchObject({
+      auctionTitle: null,
+      reason: 'Retained audit',
+    });
+    expect(provider.confirms).toHaveLength(0);
+    expect(provider.cancels).toHaveLength(0);
   });
 
   it('lists eligible wins without creating purchases and excludes unavailable or invalid wins', async () => {
