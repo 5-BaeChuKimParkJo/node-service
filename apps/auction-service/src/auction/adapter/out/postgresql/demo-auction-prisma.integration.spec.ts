@@ -58,6 +58,7 @@ describe.skipIf(!url)('managed demo creation on isolated PostgreSQL', () => {
       }),
       database.auctionViewed.deleteMany({ where: { auctionUuid: { in: rows.map((row) => row.auctionUuid) } } }),
       database.auctionBidders.deleteMany({ where: { auctionId: { in: rows.map((row) => row.auctionId) } } }),
+      database.auctionImages.deleteMany({ where: { auctionId: { in: rows.map((row) => row.auctionId) } } }),
       database.auctions.deleteMany({ where }),
     ]);
   });
