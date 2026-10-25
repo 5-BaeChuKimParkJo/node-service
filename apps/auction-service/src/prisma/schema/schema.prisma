@@ -46,6 +46,7 @@ model Auctions {
   thumbnailKey       String
   soldAt             DateTime?        @db.Timestamptz(6)
   checkoutLockedAt   DateTime?        @db.Timestamptz(6)
+  demoTemplateUuid   String?          @db.Uuid
 
   createdAt DateTime  @default(now()) @db.Timestamptz(6)
   updatedAt DateTime  @updatedAt @db.Timestamptz(6)
@@ -58,6 +59,8 @@ model Auctions {
   auctionBidders AuctionBidders[]
   auctionImages  AuctionImages[]
   purchase       AuctionPurchase?
+
+  @@index([demoTemplateUuid, endAt])
 }
 
 enum AuctionPurchaseStatus {

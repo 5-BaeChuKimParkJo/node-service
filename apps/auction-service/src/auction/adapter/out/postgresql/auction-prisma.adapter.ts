@@ -13,6 +13,7 @@ import {
   AdminAuctionBidsReturn,
   AuctionsAdminReturn,
   AuctionsReturn,
+  DemoAuctionWriteResult,
 } from '../../../application/port/out/auction-repository.port.type';
 import NewBid from '../../../domain/model/new-bid';
 import AuctionBid from '../../../domain/model/auction-bid';
@@ -38,6 +39,7 @@ import { randomUUID } from 'crypto';
 import { TaxonomyUseCase } from '../../../../taxonomy/application/port/in/taxonomy.use-case';
 import { Prisma } from 'apps/auction-service/src/prisma/generated';
 import { z } from 'zod';
+import { DemoAuctionCreationCommand } from '../../../application/model/demo-auction-creation.command';
 
 @Injectable()
 export class AuctionPrismaAdapter extends AuctionRepositoryPort {
@@ -284,26 +286,82 @@ export class AuctionPrismaAdapter extends AuctionRepositoryPort {
   }
 
   override createAuction = async (auctionForCreateDomain: NewAuction): Promise<Auction> => {
-    const { images, ...auction } = auctionForCreateDomain.getSnapshot();
-    return await this.prisma.$transaction(async (tx) => {
-      const { auctionImages, ...row } = await tx.auctions.create({
-        include: {
-          auctionImages: true,
-        },
-        data: {
-          ...auction,
-          auctionImages: {
-            createMany: {
-              data: images,
-            },
+    return this.prisma.$transaction((tx) => this.insertAuction(auctionForCreateDomain, tx));
+  };
+
+  override createDemoAuction = async (
+    auction: NewAuction,
+    context: DemoAuctionCreationCommand,
+  ): Promise<DemoAuctionWriteResult> => {
+    return this.prisma.$transaction(async (tx) => {
+      const [lock] = await tx.$queryRaw<{ locked: boolean }[]>(Prisma.sql`
+        SELECT pg_try_advisory_xact_lock(hashtextextended(${`chalnak:demo:${context.templateUuid}`}, 0)) AS locked
+      `);
+      if (!lock?.locked) return { status: 'skipped-busy' };
+
+      const [template] = await tx.$queryRaw<
+        {
+          title: string;
+          status: string;
+          deletedAt: Date | null;
+          sellerUuid: string;
+          thumbnailKey: string;
+        }[]
+      >(Prisma.sql`
+        SELECT "title", "status", "deletedAt", "sellerUuid", "thumbnailKey"
+        FROM "Auctions" WHERE "auctionUuid" = ${context.templateUuid}::uuid FOR SHARE
+      `);
+      const snapshot = auction.getSnapshot();
+      if (
+        !template ||
+        !/^\[DEMO(?:-\d+)?\]\s*/.test(template.title) ||
+        template.status !== 'visible' ||
+        template.deletedAt ||
+        template.sellerUuid !== snapshot.sellerUuid ||
+        template.thumbnailKey !== snapshot.thumbnailKey
+      ) {
+        throw new AppException(
+          { message: '데모 경매 템플릿이 변경되었습니다. 다시 확인해 주세요.', code: ErrorCode.VALIDATION_ERROR },
+          HttpStatus.CONFLICT,
+        );
+      }
+      if (context.mode === 'automatic') {
+        const active = await tx.auctions.findFirst({
+          where: {
+            OR: [{ auctionUuid: context.templateUuid }, { demoTemplateUuid: context.templateUuid }],
+            status: 'visible',
+            deletedAt: null,
+            soldAt: null,
+            checkoutLockedAt: null,
+            startAt: { lte: context.now },
+            endAt: { gt: context.now },
           },
-        },
-      });
-      const auctionDomain = new Auction(auctionPropsSchema.parse({ ...row, images: auctionImages }));
-      await this.createAuctionOutbox(auctionDomain, 'c', tx);
-      return auctionDomain;
+          select: { auctionUuid: true },
+        });
+        if (active) return { status: 'skipped-active' };
+      }
+      return { status: 'created', auction: await this.insertAuction(auction, tx, context.templateUuid) };
     });
   };
+
+  private async insertAuction(
+    auction: NewAuction,
+    tx: Prisma.TransactionClient,
+    demoTemplateUuid?: string,
+  ): Promise<Auction> {
+    const { images, ...snapshot } = auction.getSnapshot();
+    const { auctionImages, ...row } = await tx.auctions.create({
+      include: { auctionImages: true },
+      data: {
+        ...snapshot,
+        ...(demoTemplateUuid ? { demoTemplateUuid } : {}),
+        auctionImages: { createMany: { data: images } },
+      },
+    });
+    const result = new Auction(auctionPropsSchema.parse({ ...row, images: auctionImages }));
+    await this.createAuctionOutbox(result, 'c', tx);
+    return result;
+  }
 
   override updateAuction = async (auctionForUpdate: AuctionUpdate): Promise<Auction> => {
     const { images, auctionUuid, ...auction } = auctionForUpdate.getSnapshot();

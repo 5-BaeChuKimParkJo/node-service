@@ -5,6 +5,8 @@ import { z } from 'zod';
 import { DemoAuctionResult } from '../model/demo-auction.result';
 import { CreateAuctionUseCase } from '../port/in/create-auction.use-case';
 import { AuctionRepositoryPort } from '../port/out/auction-repository.port';
+import { DemoAuctionCreationResult } from '../model/demo-auction-creation.result';
+import { DemoAuctionCreationCommand } from '../model/demo-auction-creation.command';
 
 const demoLabel = /^\[DEMO(?:-\d+)?\]\s*/;
 
@@ -16,6 +18,32 @@ export class DemoAuctionService {
   ) {}
 
   async create(now = new Date()): Promise<DemoAuctionResult> {
+    const result = await this.createWithMode('manual', now);
+    if (result.status !== 'created') {
+      throw new AppException(
+        {
+          message: '데모 경매 생성이 진행 중입니다. 목록을 확인한 뒤 다시 시도해 주세요.',
+          code: ErrorCode.VALIDATION_ERROR,
+        },
+        HttpStatus.CONFLICT,
+      );
+    }
+    return {
+      auctionUuid: result.auction.auctionUuid,
+      title: result.auction.title,
+      startAt: result.auction.startAt.toISOString(),
+      endAt: result.auction.endAt.toISOString(),
+    };
+  }
+
+  async ensureActive(now = new Date()): Promise<DemoAuctionCreationResult> {
+    return this.createWithMode('automatic', now);
+  }
+
+  private async createWithMode(
+    mode: DemoAuctionCreationCommand['mode'],
+    now: Date,
+  ): Promise<DemoAuctionCreationResult> {
     if (!z.string().uuid().safeParse(this.templateUuid).success) {
       throw new AppException(
         { message: '데모 경매 템플릿이 설정되지 않았습니다.', code: ErrorCode.VALIDATION_ERROR },
@@ -34,7 +62,7 @@ export class DemoAuctionService {
     const startAt = new Date(now);
     startAt.setUTCMinutes(0, 0, 0);
     const endAt = new Date(startAt.getTime() + 24 * 60 * 60 * 1000);
-    const result = await this.creator.execute(
+    return this.creator.executeDemo(
       {
         title: `[DEMO] ${template.title.replace(demoLabel, '').trim()}`.slice(0, 100),
         description:
@@ -54,12 +82,7 @@ export class DemoAuctionService {
         images: template.images.map(({ key, order }) => ({ key, order })),
       },
       { memberUuid: template.sellerUuid, role: 'member' },
+      { templateUuid: this.templateUuid, mode, now },
     );
-    return {
-      auctionUuid: result.auctionUuid,
-      title: result.title,
-      startAt: result.startAt.toISOString(),
-      endAt: result.endAt.toISOString(),
-    };
   }
 }

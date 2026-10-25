@@ -15,6 +15,7 @@ import { AuctionsAdminCommand } from '../../model/auctions-admin.command';
 import { AuctionsByIdsAdminCommand } from '../../model/auctions-by-ids-admin.command';
 import { AuctionsByIdsCommand } from '../../model/auctions-by-ids.command';
 import { AuctionsCommand } from '../../model/auctions.command';
+import { DemoAuctionCreationCommand } from '../../model/demo-auction-creation.command';
 import {
   AdminAuctionActionArgs,
   AdminAuctionActionRecord,
@@ -22,6 +23,7 @@ import {
   AuctionBiddersReturn,
   AuctionsAdminReturn,
   AuctionsReturn,
+  DemoAuctionWriteResult,
 } from './auction-repository.port.type';
 export type AuctionBidSession = {
   auction: Auction;
@@ -44,6 +46,10 @@ export abstract class AuctionRepositoryPort {
   abstract findAuctionsByIds(args: AuctionsByIdsAdminCommand): Promise<AdminAuction[]>;
 
   abstract createAuction: (auctionForCreate: NewAuction) => Promise<Auction>;
+  abstract createDemoAuction: (
+    auction: NewAuction,
+    context: DemoAuctionCreationCommand,
+  ) => Promise<DemoAuctionWriteResult>;
 
   abstract updateAuction: (auctionForUpdate: AuctionUpdate) => Promise<Auction>;
   abstract updateAuctionCurrent: (auctionUuid: string, currentBid: bigint, currentBidderUuid: string) => Promise<void>;

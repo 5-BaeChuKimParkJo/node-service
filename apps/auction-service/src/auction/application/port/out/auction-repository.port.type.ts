@@ -4,6 +4,10 @@ import Auction from '../../../domain/model/auction';
 import { AuctionAdminAction } from '../../../domain/model/admin-auction';
 import { AuctionAdminBidsCursor } from '../../model/auction-admin-bids.command';
 
+export type DemoAuctionWriteResult =
+  | { status: 'created'; auction: Auction }
+  | { status: 'skipped-active' | 'skipped-busy' };
+
 export type AdminAuctionBidRecord = {
   auctionBidderUuid: string;
   bidderUuid: string;
