@@ -1,99 +1,73 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# 찰낙찰낙 · Auction Service
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+경매·입찰·낙찰자 결제와 관리자 업무 API를 제공하는 NestJS / Fastify 서비스다.
+이 저장소의 현재 배포 대상은 `auction-service` 한 개다.
+기준일: 2026-10-25.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+## 역할과 데이터 흐름
 
-## Description
+- 경매 생성·조회·운영 처리, 입찰 이력과 Kafka 입찰 처리.
+- PostgreSQL `cn_auction`의 업무 데이터·결제·관리 이력·Outbox 저장.
+- Debezium → Kafka → Search Service로 검색 사본 갱신.
+- 낙찰자 전용 Toss 테스트 결제, 결과 미확정 상태 확인과 관리자 전액 취소.
+- 최근 24시간 인기 경매와 5분 주기 활성 데모 보충.
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+입찰 접수는 성공 확정이 아니다. 고객 웹은 저장된 입찰 내역으로 결과를 확인한다.
+DB와 검색 간에는 비동기 지연이 있고, Kafka 전체 경로 exactly-once를 보장하지 않는다.
+결제·데모 동시성 보호와 기존 입찰 Consumer의 실패 복구 한계는
+[아키텍처](https://github.com/5-BaeChuKimParkJo/FE-Service/blob/main/docs/portfolio/architecture.md)에 설명했다.
 
-## Project setup
+## 폴더 구조
 
-```bash
-$ pnpm install
+```text
+apps/auction-service/src/auction       경매 domain / application / adapter
+apps/auction-service/src/auction-etc   기존 입찰 배치 처리
+apps/auction-service/src/payment       테스트 결제
+apps/auction-service/src/prisma        스키마·마이그레이션·생성 클라이언트
+libs/common                           Kafka·스토리지·공통 구현
+scripts                               정적 검사·격리 DB 테스트 실행기
+docs                                  기능·보안 감사·설계 기록
 ```
 
-## Compile and run the project
+`catalog-query-service`, `notification-service`, `notification-consumer-service`는
+보존된 앱이며 홈랩 배포 대상이 아니다. 일부 명령이 이 앱들의 빌드를 포함해도
+서비스가 실제로 가동된다는 뜻은 아니다.
 
-```bash
-# development
-$ pnpm run start
+## 로컬 실행과 검증
 
-# watch mode
-$ pnpm run start:dev
+Node.js 22 / npm 10.9.4 기준이다. DB·Redis·Kafka·MinIO와 서버 환경 변수는
+별도로 준비한다. 단순 실행을 위해 운영 Secret이나 운영 DB를 테스트에 복사하지 않는다.
 
-# production mode
-$ pnpm run start:prod
+```powershell
+npm ci
+npm run prisma:auction-service:generate
+npm run prisma:notification-consumer-service:generate
+npx nest start auction-service --watch
 ```
 
-## Run tests
-
-```bash
-# unit tests
-$ pnpm run test
-
-# e2e tests
-$ pnpm run test:e2e
-
-# test coverage
-$ pnpm run test:cov
+```powershell
+npm run test:checks
+npm run check:naming
+npm run check:architecture
+npm run check:format
+npm run test:unit
+npm run build:all
 ```
 
-## Deployment
+`npm run test:payment:integration`은 loopback의 버려도 되는 `_test` PostgreSQL을
+`TEST_DATABASE_URL`로 지정한 경우에만 실행한다. 마이그레이션과 fixture 정리를 포함한다.
+기본 unit에서 DB 테스트가 skip된 결과는 실제 DB 검증 성공과 다르다.
+Windows의 Kafka 네이티브 바인딩 제약과 Linux 검증은 [보안·환경 기록](docs/security-audit.md)을 참고한다.
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+## 배포와 문서
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+main CI 검증 후 `ghcr.io/5-baechukimparkjo/auction-service:<commit-sha>`를 게시한다.
+시작 시 Prisma migration deploy를 수행한다. 새 스키마가 필요한 릴리스는
+기능 플래그를 끈 채 마이그레이션과 Pod Ready를 확인한 뒤 활성화한다.
 
-```bash
-$ pnpm install -g @nestjs/mau
-$ mau deploy
-```
-
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
-# node-service
+- [전체 아키텍처](https://github.com/5-BaeChuKimParkJo/FE-Service/blob/main/docs/portfolio/architecture.md)
+- [데모 보충·수동 생성](docs/demo-auctions.md)
+- [결제 구현·검증](apps/auction-service/src/payment/README.md)
+- [검증 근거](https://github.com/5-BaeChuKimParkJo/FE-Service/blob/main/docs/portfolio/verification.md)
+- [비공개 GitOps](https://github.com/chuman0216/cncn_private)
+- [코드·커밋 규칙](CONTRIBUTING.md)
