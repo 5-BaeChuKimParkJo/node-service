@@ -1,7 +1,7 @@
 # Demo Auction Replenishment
 
 Date: 2026-10-25 (Asia/Seoul).
-Status: Awaiting approval of this design; implementation has not started.
+Status: Design approved on 2026-10-25; implementation awaits plan review.
 
 ## Intent and Agreed Scope
 
