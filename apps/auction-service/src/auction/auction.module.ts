@@ -23,6 +23,7 @@ import { PopularAuctionPrismaAdapter } from './adapter/out/postgresql/popular-au
 import { PopularAuctionRedisAdapter } from './adapter/out/redis/popular-auction-redis.adapter';
 import { PopularAuctionsController } from './adapter/in/web/popular-auctions.controller';
 import { PopularAuctionScheduler } from './adapter/in/scheduling/popular-auction-scheduler';
+import { DemoAuctionScheduler } from './adapter/in/scheduling/demo-auction-scheduler';
 import { ConfigService } from '@nestjs/config';
 import { DemoAuctionService } from './application/service/demo-auction.service';
 import { DemoAuctionController } from './adapter/in/web/demo-auction.controller';
@@ -46,6 +47,7 @@ import { CreateAuctionUseCase } from './application/port/in/create-auction.use-c
     { provide: AdminHistoryQueryPort, useClass: AdminHistoryPrismaAdapter },
     PopularAuctionService,
     PopularAuctionScheduler,
+    DemoAuctionScheduler,
     { provide: PopularAuctionRepositoryPort, useClass: PopularAuctionPrismaAdapter },
     { provide: PopularAuctionCachePort, useClass: PopularAuctionRedisAdapter },
   ],

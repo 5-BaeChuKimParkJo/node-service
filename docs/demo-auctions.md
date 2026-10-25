@@ -1,4 +1,4 @@
-# Manual Demo Auction Creation
+# Portfolio Demo Auctions
 
 `POST /api/v1/internal/admin/auctions/demo` creates one new portfolio auction.
 It requires the existing internal administrator token, an `x-admin-actor` header,
@@ -14,7 +14,8 @@ the caller choose a different template or seller.
 The template's product metadata, owned image keys and seller are reused, not its
 UUID, bids, winner, views, payments or dates. Creation delegates to the normal
 `CreateAuctionUseCase`, including taxonomy/owned-image checks and the existing
-transactional auction/outbox insert. No schema change or new storage is needed.
+transactional auction/outbox insert. A private nullable `demoTemplateUuid` column
+tracks newly managed demos; it is never exposed in public HTTP or event payloads.
 The source auction is read only. The title is labelled `[DEMO]`, and the public
 description explicitly states that no real delivery or trade is provided.
 
@@ -31,8 +32,32 @@ ends 24 hours later, respecting the existing whole-hour domain rule. Therefore
 }
 ```
 
-Every deliberate POST creates a new auction. There are no automatic retries,
-scheduled replenishment, artificial bids, ranking boosts, or deletion/reset of
-existing auctions. After an ambiguous network failure, inspect the admin list
+Every deliberate POST creates a new auction, even if another active demo exists.
+Manual and automatic creation share a nonblocking transaction advisory lock;
+manual contention returns 409 without retry. After an ambiguous network failure, inspect the admin list
 before submitting another request. Successful creation logs the authenticated
 operator and new auction UUID without adding those details to the public item.
+
+## Optional scheduled replenishment
+
+Set `DEMO_AUCTION_AUTO_ENABLED` to the exact string `true` to enable a check every
+five minutes (at second zero). All other values, including an absent setting,
+disable it. There is no startup catch-up and no UI toggle. A tick creates one
+demo only when no eligible managed auction exists. An eligible auction is the
+configured template or a child marked with that template UUID: visible, not
+deleted, not sold, not locked for checkout, and `startAt <= now < endAt`.
+Unmarked legacy copies are preserved and do not count; titles alone never prove
+provenance. Deliberate manual extras are never removed or reset.
+
+Image ownership/storage and domain validation run before the write transaction.
+The transaction revalidates the template, acquires the shared lock and commits
+the new auction, provenance and outbox together. Another Pod holding the lock
+causes a skip; an existing eligible candidate also causes a skip. A failed tick
+logs a sanitized warning and waits until the next scheduled tick without retries.
+No artificial views, bids, ranking boosts or payment-provider calls are made.
+Original auction history, bids, payment records and stored images are retained.
+
+Deploy the new image with the flag disabled and confirm the additive migration
+before enabling it in GitOps. To stop replenishment, remove the flag or set it to
+`false` and roll out the deployment. Keep the nullable column and existing data
+on rollback; disabling replenishment never performs financial or data cleanup.
