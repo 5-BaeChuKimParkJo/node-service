@@ -51,3 +51,28 @@ kubectl -n argocd get application chalnak-services
 ```
 
 Kafka behavior: [KafkaJS consumer documentation](https://kafka.js.org/docs/consuming).
+
+## Real broker CI suite
+
+`npm run test:kafka:integration` runs a separate sequential suite with explicit
+`TEST_DATABASE_URL` and `TEST_KAFKA_BROKER=127.0.0.1:9092`. The database must pass
+the existing loopback `_test` guard. Before migration or fixture writes, the
+runner checks the broker's actual cluster identity against the fixed disposable
+CI cluster ID. The suite also refuses pre-existing application topics/groups.
+It is destructive test tooling: do not forward a live broker/DB into these ports.
+
+Node Quality provisions Kafka 4.3.1 KRaft alongside its PostgreSQL service.
+No local Docker, deployed data services, dependency or runtime change is needed.
+The real native KafkaService producers, production publisher/consumer, bid service,
+repository and PostgreSQL are used. A separate real KafkaJS consumer observes DLQ.
+
+Cases cover a valid publish/save/ack, controlled consumer shutdown and isolated
+group rewind/redelivery, a real DB error and quarantine, and real broker rejection
+of an oversized DLQ record followed by config restoration and automatic recovery.
+Only this suite's topics/groups/fixture UUIDs are modified. The DLQ byte limit is
+restored during cleanup and created resources are removed before CI disposal.
+
+This is not a broker power-loss/multi-node failover test, HTTP/browser E2E, search
+projection test or an exactly-once guarantee. The earlier injected transport tests
+remain separate. CI/test-only commits can explicitly dispatch Node Quality without
+publishing an unchanged application image; runtime changes require normal image CI.
