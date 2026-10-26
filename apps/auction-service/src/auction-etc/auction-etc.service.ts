@@ -1,4 +1,4 @@
-import { HttpStatus, Injectable } from '@nestjs/common';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { ErrorCode } from '@app/common/common/const';
 import { toNumber } from '@app/common/utils/number.utils';
 import { User } from '@app/common/types/user';
@@ -18,6 +18,8 @@ import { S3Service } from '@app/common/s3/s3.service';
 
 @Injectable()
 export class AuctionEtcService {
+  private readonly logger = new Logger(AuctionEtcService.name);
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly auctionEtcRepository: AuctionEtcRepository,
@@ -239,6 +241,10 @@ export class AuctionEtcService {
       );
     });
 
-    await this.auctionEtcFn.sendBidMessages(biddersWithStatus);
+    try {
+      await this.auctionEtcFn.sendBidMessages(biddersWithStatus);
+    } catch {
+      this.logger.warn('Bid transaction committed; optional result notification failed');
+    }
   };
 }

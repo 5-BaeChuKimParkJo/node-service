@@ -15,7 +15,8 @@ try {
       'apps/auction-service/src/payment/adapter/out/persistence/payment-concurrency.integration.spec.ts',
       'apps/auction-service/src/payment/adapter/out/persistence/payment-recovery.integration.spec.ts',
       'apps/auction-service/src/auction/adapter/out/postgresql/popular-auction-prisma.integration.spec.ts',
-      'apps/auction-service/src/auction/adapter/out/postgresql/demo-auction-prisma.integration.spec.ts']);
+      'apps/auction-service/src/auction/adapter/out/postgresql/demo-auction-prisma.integration.spec.ts',
+      'apps/auction-service/src/auction-etc/bid-recovery.integration.spec.ts']);
   }
 } catch (error) {
   console.error(error.message);

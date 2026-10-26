@@ -1,6 +1,6 @@
 import { KafkaService } from '@app/common/kafka/kafka.service';
-import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
-import { Batch, Consumer, KafkaMessage } from 'kafkajs';
+import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { Batch, Consumer, KafkaJSError, KafkaMessage } from 'kafkajs';
 import { KafkaDlqTopicValue } from '@app/common/schema/kafka-dlq-topic.schema';
 import { auctionServiceBidderCreatedSchema } from '../auction/adapter/in/messaging/schema/auction-bidder-created.schema';
 import { AuctionBidCreatedEventMapper } from '../auction/adapter/in/messaging/mapper/auction-bid-created-event.mapper';
@@ -9,6 +9,7 @@ import { AuctionEtcService } from './auction-etc.service';
 @Injectable()
 export class AuctionServiceBidderCreatedConsumer implements OnModuleInit, OnModuleDestroy {
   private consumer: Consumer;
+  private readonly logger = new Logger(AuctionServiceBidderCreatedConsumer.name);
 
   constructor(
     private readonly kafkaService: KafkaService,
@@ -16,6 +17,7 @@ export class AuctionServiceBidderCreatedConsumer implements OnModuleInit, OnModu
   ) {
     this.consumer = this.kafkaService.consumer({
       groupId: 'auction-service.bidder.created',
+      retry: { initialRetryTime: 1000 },
     });
   }
 
@@ -27,9 +29,16 @@ export class AuctionServiceBidderCreatedConsumer implements OnModuleInit, OnModu
   };
 
   private commit = async (batch: Batch, resolveOffset: (offset: string) => void) => {
-    resolveOffset(batch.lastOffset());
     const lastOffset = BigInt(batch.lastOffset()) + 1n;
-    await this.consumer.commitOffsets([{ topic: batch.topic, partition: batch.partition, offset: String(lastOffset) }]);
+    try {
+      await this.consumer.commitOffsets([
+        { topic: batch.topic, partition: batch.partition, offset: String(lastOffset) },
+      ]);
+    } catch {
+      this.logger.error(`Bid offset acknowledgement failed: ${batch.topic}/${batch.partition}/${batch.lastOffset()}`);
+      throw new KafkaJSError('Bid offset acknowledgement failed; restart from broker offsets', { retriable: true });
+    }
+    resolveOffset(batch.lastOffset());
   };
 
   private sendDlq = async (batch: Batch, error: unknown) => {
@@ -64,12 +73,20 @@ export class AuctionServiceBidderCreatedConsumer implements OnModuleInit, OnModu
         try {
           const parsed = this.parseMessages(batch.messages);
           await this.auctionEtcService.bidAuctionBatch(parsed);
-          await this.commit(batch, resolveOffset);
         } catch (error) {
-          await this.commit(batch, resolveOffset);
-          await this.sendDlq(batch, error);
-          console.log(error);
+          try {
+            await this.sendDlq(batch, error);
+          } catch {
+            this.logger.error(
+              `Bid quarantine publication failed: ${batch.topic}/${batch.partition}/${batch.lastOffset()}`,
+            );
+            throw new KafkaJSError('Bid quarantine publication failed; source offsets retained', { retriable: true });
+          }
+          this.logger.warn(
+            `Bid batch quarantined: ${batch.topic}/${batch.partition}/${batch.firstOffset()}-${batch.lastOffset()}`,
+          );
         }
+        await this.commit(batch, resolveOffset);
       },
     });
   };
