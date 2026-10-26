@@ -16,12 +16,36 @@ vi.mock('@app/common/kafka/kafka.service', () => ({ KafkaService: class KafkaSer
 
 const url = process.env.TEST_DATABASE_URL ? requireTestDatabaseUrl(process.env.TEST_DATABASE_URL) : undefined;
 
+async function cleanupFixture(database: PrismaClient, auctionUuid: string | undefined, auctionId: bigint | undefined) {
+  if (auctionUuid && auctionId !== undefined)
+    await database.$transaction([
+      database.outbox.deleteMany({ where: { aggregateType: 'auction', aggregateId: auctionUuid } }),
+      database.auctionBidders.deleteMany({ where: { auctionId } }),
+      database.auctions.deleteMany({ where: { auctionUuid } }),
+    ]);
+}
+
+describe('bid fixture cleanup safety', () => {
+  it('issues no deletes if fixture creation did not return an ID', async () => {
+    const remove = vi.fn();
+    const database = {
+      $transaction: vi.fn(),
+      outbox: { deleteMany: remove },
+      auctionBidders: { deleteMany: remove },
+      auctions: { deleteMany: remove },
+    };
+    await cleanupFixture(database as unknown as PrismaClient, randomUUID(), undefined);
+    expect(remove).not.toHaveBeenCalled();
+    expect(database.$transaction).not.toHaveBeenCalled();
+  });
+});
+
 describe.skipIf(!url)('bid recovery on isolated PostgreSQL', () => {
   let database: PrismaClient;
   let repository: AuctionEtcRepository;
   let service: AuctionEtcService;
   let auctionUuid: string;
-  let auctionId: bigint;
+  let auctionId: bigint | undefined;
   let bidderUuid: string;
   let input: { auctionUuid: string; bidderUuid: string; bidAmount: number; createdAt: Date; requestId: string }[];
   const notifications = { sendBidMessages: vi.fn() };
@@ -32,6 +56,8 @@ describe.skipIf(!url)('bid recovery on isolated PostgreSQL', () => {
   });
 
   beforeEach(async () => {
+    auctionId = undefined;
+    auctionUuid = '';
     vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => {});
     vi.spyOn(Logger.prototype, 'error').mockImplementation(() => {});
     notifications.sendBidMessages.mockReset().mockResolvedValue(undefined);
@@ -72,12 +98,7 @@ describe.skipIf(!url)('bid recovery on isolated PostgreSQL', () => {
 
   afterEach(async () => {
     vi.restoreAllMocks();
-    if (auctionUuid)
-      await database.$transaction([
-        database.outbox.deleteMany({ where: { aggregateType: 'auction', aggregateId: auctionUuid } }),
-        database.auctionBidders.deleteMany({ where: { auctionId } }),
-        database.auctions.deleteMany({ where: { auctionUuid } }),
-      ]);
+    await cleanupFixture(database, auctionUuid, auctionId);
   });
   afterAll(async () => {
     await database?.$disconnect();
