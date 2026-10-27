@@ -12,9 +12,11 @@ has two-second connect / ten-second read timeouts; the browser aborts after twel
 
 Counters are decimal strings. Source lag sums `high - max(committed, low)` per
 partition; uncommitted `-1` uses low, matching fromBeginning. Committed offsets
-below low flag `retentionGap`, while offsets above high or missing partitions fail
+below low flag `retentionGap`, while offsets above high or mismatched partition sets fail
 the snapshot. Missing topics/group, unknown group state and broker errors return
 `broker: unavailable` and null counters, never an invented zero.
+Every started broker query settles before disconnect, including when a sibling
+query fails, so pending metadata work cannot reconnect after cleanup.
 
 `dlqRetained` is the sum of DLQ high-low offset spans. Retention, compaction and
 offset gaps mean it is not an exact record count or unresolved failure count.

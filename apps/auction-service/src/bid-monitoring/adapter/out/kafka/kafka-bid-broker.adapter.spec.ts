@@ -54,6 +54,21 @@ describe('bid broker read-only diagnostics', () => {
     });
   });
   it.each([
+    [
+      [{ partition: 0, low: '0', high: '5' }],
+      [
+        { partition: 0, offset: '5' },
+        { partition: 1, offset: '0' },
+      ],
+    ],
+    [
+      [{ partition: 0, low: '0', high: '5' }],
+      [
+        { partition: 0, offset: '5' },
+        { partition: 1, offset: '0' },
+        { partition: 1, offset: '0' },
+      ],
+    ],
     [[{ partition: 0, low: '2', high: '1' }], [{ partition: 0, offset: '0' }]],
     [[{ partition: 0, low: '0', high: '5' }], [{ partition: 0, offset: '6' }]],
     [[{ partition: 0, low: '0', high: '5' }], []],
@@ -86,5 +101,37 @@ describe('bid broker read-only diagnostics', () => {
     admin.describeGroups.mockResolvedValue({ groups: [] });
     await expect(adapter.snapshot()).rejects.toThrow();
     expect(admin.disconnect).toHaveBeenCalledTimes(2);
+  });
+
+  it('settles every started query before disconnecting after another query fails', async () => {
+    const trace: string[] = [];
+    let release!: (value: unknown) => void;
+    const metadata = new Promise((resolve) => {
+      release = resolve;
+    });
+    admin.describeGroups.mockRejectedValue(new Error('group failure'));
+    admin.fetchTopicOffsets.mockImplementation((name: string) =>
+      name === topic
+        ? metadata.then((value) => {
+            trace.push('metadata settled');
+            return value;
+          })
+        : Promise.resolve([{ partition: 0, low: '0', high: '0' }]),
+    );
+    admin.disconnect.mockImplementation(async () => {
+      trace.push('disconnect');
+    });
+    const result = new KafkaBidBrokerAdapter(new ConfigService({ KAFKA_SERVERS: 'unused' })).snapshot();
+    const observed = result.catch(() => {
+      trace.push('returned');
+    });
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    try {
+      expect(admin.disconnect).not.toHaveBeenCalled();
+    } finally {
+      release([{ partition: 0, low: '0', high: '5' }]);
+      await observed;
+    }
+    expect(trace).toEqual(['metadata settled', 'disconnect', 'returned']);
   });
 });

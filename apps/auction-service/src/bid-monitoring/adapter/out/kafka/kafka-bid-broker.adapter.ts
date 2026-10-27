@@ -10,7 +10,14 @@ type Head = { partition: number; low: string; high: string };
 type Commit = { partition: number; offset: string };
 
 export function summarizeBidOffsets(heads: Head[], commits: Commit[]) {
-  if (!heads.length || new Set(heads.map((head) => head.partition)).size !== heads.length) {
+  const partitions = new Set(heads.map((head) => head.partition));
+  if (
+    !heads.length ||
+    partitions.size !== heads.length ||
+    commits.length !== heads.length ||
+    new Set(commits.map((commit) => commit.partition)).size !== commits.length ||
+    commits.some((commit) => !partitions.has(commit.partition))
+  ) {
     throw new Error('Incomplete offsets');
   }
   let lag = 0n;
@@ -54,22 +61,30 @@ export class KafkaBidBrokerAdapter implements BidBrokerPort {
       await admin.connect();
       const topics = await admin.listTopics();
       if (!topics.includes(topic) || !topics.includes(dlq)) throw new Error('Bid topics unavailable');
-      const [groups, heads, dlqHeads, commits] = await Promise.all([
+      const [groups, heads, dlqHeads, commits] = await Promise.allSettled([
         admin.describeGroups([topic]),
         admin.fetchTopicOffsets(topic),
         admin.fetchTopicOffsets(dlq),
         admin.fetchOffsets({ groupId: topic, topics: [topic], resolveOffsets: false }),
       ]);
-      const group = groups.groups.find((item) => item.groupId === topic);
+      if (
+        groups.status !== 'fulfilled' ||
+        heads.status !== 'fulfilled' ||
+        dlqHeads.status !== 'fulfilled' ||
+        commits.status !== 'fulfilled'
+      ) {
+        throw new Error('Bid status queries failed');
+      }
+      const group = groups.value.groups.find((item) => item.groupId === topic);
       if (!group || !['Stable', 'Empty', 'PreparingRebalance', 'CompletingRebalance'].includes(group.state)) {
         throw new Error('Bid group unavailable');
       }
-      const offsets = commits.find((item) => item.topic === topic);
+      const offsets = commits.value.find((item) => item.topic === topic);
       if (!offsets) throw new Error('Bid offsets unavailable');
-      const summary = summarizeBidOffsets(heads, offsets.partitions);
+      const summary = summarizeBidOffsets(heads.value, offsets.partitions);
       const retained = summarizeBidOffsets(
-        dlqHeads,
-        dlqHeads.map((head) => ({ partition: head.partition, offset: head.low })),
+        dlqHeads.value,
+        dlqHeads.value.map((head) => ({ partition: head.partition, offset: head.low })),
       );
       return {
         groupState: group.state,
