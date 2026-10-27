@@ -5,6 +5,7 @@ import { KafkaDlqTopicValue } from '@app/common/schema/kafka-dlq-topic.schema';
 import { auctionServiceBidderCreatedSchema } from '../auction/adapter/in/messaging/schema/auction-bidder-created.schema';
 import { AuctionBidCreatedEventMapper } from '../auction/adapter/in/messaging/mapper/auction-bid-created-event.mapper';
 import { AuctionEtcService } from './auction-etc.service';
+import { BidProcessingStateService } from '../bid-monitoring/application/service/bid-processing-state.service';
 
 @Injectable()
 export class AuctionServiceBidderCreatedConsumer implements OnModuleInit, OnModuleDestroy {
@@ -14,6 +15,7 @@ export class AuctionServiceBidderCreatedConsumer implements OnModuleInit, OnModu
   constructor(
     private readonly kafkaService: KafkaService,
     private readonly auctionEtcService: AuctionEtcService,
+    private readonly processingState: BidProcessingStateService,
   ) {
     this.consumer = this.kafkaService.consumer({
       groupId: 'auction-service.bidder.created',
@@ -35,10 +37,12 @@ export class AuctionServiceBidderCreatedConsumer implements OnModuleInit, OnModu
         { topic: batch.topic, partition: batch.partition, offset: String(lastOffset) },
       ]);
     } catch {
+      this.processingState.recordError('OFFSET_COMMIT_FAILED');
       this.logger.error(`Bid offset acknowledgement failed: ${batch.topic}/${batch.partition}/${batch.lastOffset()}`);
       throw new KafkaJSError('Bid offset acknowledgement failed; restart from broker offsets', { retriable: true });
     }
     resolveOffset(batch.lastOffset());
+    this.processingState.recordAcknowledgement();
   };
 
   private sendDlq = async (batch: Batch, error: unknown) => {
@@ -74,9 +78,11 @@ export class AuctionServiceBidderCreatedConsumer implements OnModuleInit, OnModu
           const parsed = this.parseMessages(batch.messages);
           await this.auctionEtcService.bidAuctionBatch(parsed);
         } catch (error) {
+          this.processingState.recordError('BID_PROCESSING_FAILED');
           try {
             await this.sendDlq(batch, error);
           } catch {
+            this.processingState.recordError('DLQ_PUBLICATION_FAILED');
             this.logger.error(
               `Bid quarantine publication failed: ${batch.topic}/${batch.partition}/${batch.lastOffset()}`,
             );

@@ -3,6 +3,7 @@ import type { Batch, ConsumerRunConfig, EachBatchPayload } from 'kafkajs';
 import { KafkaService } from '@app/common/kafka/kafka.service';
 import { AuctionEtcService } from './auction-etc.service';
 import { AuctionServiceBidderCreatedConsumer } from './auction-service-bidder-created.consumer';
+import { BidProcessingStateService } from '../bid-monitoring/application/service/bid-processing-state.service';
 
 vi.mock('@app/common/kafka/kafka.service', () => ({ KafkaService: class KafkaService {} }));
 
@@ -39,9 +40,11 @@ async function harness(value = JSON.stringify(event), offset = '7') {
       trace.push('db');
     }),
   };
+  const state = new BidProcessingStateService();
   const service = new AuctionServiceBidderCreatedConsumer(
     kafka as unknown as KafkaService,
     work as unknown as AuctionEtcService,
+    state,
   );
   const batch = {
     topic: 'auction-service.bidder.created',
@@ -55,7 +58,7 @@ async function harness(value = JSON.stringify(event), offset = '7') {
   });
   await service.onModuleInit();
   const deliver = () => handler({ batch, resolveOffset } as unknown as EachBatchPayload);
-  return { trace, consumer, kafka, work, service, batch, resolveOffset, deliver };
+  return { trace, consumer, kafka, work, service, state, batch, resolveOffset, deliver };
 }
 
 describe('AuctionServiceBidderCreatedConsumer recovery', () => {
@@ -126,6 +129,10 @@ describe('AuctionServiceBidderCreatedConsumer recovery', () => {
     expect(failure.message).not.toContain('fixture producer secret');
     expect(failure.cause).toBeUndefined();
     expect(h.consumer.commitOffsets).not.toHaveBeenCalled();
+    expect(h.state.snapshot()).toMatchObject({
+      lastAcknowledgedAt: null,
+      lastError: { code: 'DLQ_PUBLICATION_FAILED' },
+    });
     expect(h.resolveOffset).not.toHaveBeenCalled();
     await h.deliver();
     expect(h.trace).toEqual(['dlq', 'commit', 'resolve']);
@@ -140,6 +147,7 @@ describe('AuctionServiceBidderCreatedConsumer recovery', () => {
     });
     await h.deliver();
     expect(h.trace).toEqual(['db', 'commit', 'resolve']);
+    expect(h.state.snapshot().lastAcknowledgedAt).not.toBeNull();
   });
 
   it('keeps a successful transaction out of DLQ when its offset acknowledgement fails', async () => {
@@ -153,6 +161,7 @@ describe('AuctionServiceBidderCreatedConsumer recovery', () => {
     expect(h.consumer.commitOffsets).toHaveBeenCalledTimes(1);
     expect(h.kafka.send).not.toHaveBeenCalled();
     expect(h.resolveOffset).not.toHaveBeenCalled();
+    expect(h.state.snapshot()).toMatchObject({ lastAcknowledgedAt: null, lastError: { code: 'OFFSET_COMMIT_FAILED' } });
   });
 
   it('does not publish another DLQ record inside a failed quarantine commit', async () => {

@@ -14,6 +14,9 @@ import type { AuctionServiceBidderCreatedConsumer } from './auction-service-bidd
 import type { AuctionKafkaAdapter } from '../auction/adapter/out/kafka/auction-kafka.adapter';
 import { requireTestDatabaseUrl } from '../../../../scripts/test-database.mjs';
 import { requireTestKafkaBroker, requireTestKafkaCluster } from '../../../../scripts/test-kafka.mjs';
+import { BidProcessingStateService } from '../bid-monitoring/application/service/bid-processing-state.service';
+import { BidProcessingStatusService } from '../bid-monitoring/application/service/bid-processing-status.service';
+import { KafkaBidBrokerAdapter } from '../bid-monitoring/adapter/out/kafka/kafka-bid-broker.adapter';
 
 const broker = process.env.TEST_KAFKA_BROKER ? requireTestKafkaBroker(process.env.TEST_KAFKA_BROKER) : undefined;
 const url = broker ? requireTestDatabaseUrl(process.env.TEST_DATABASE_URL) : undefined;
@@ -64,6 +67,7 @@ describe.skipIf(!broker)('bid recovery with real Kafka and PostgreSQL', () => {
   let config: ConfigService<EnvSchema>;
   let ownsTopics = false;
   let restrictedDlq = false;
+  let processingState: BidProcessingStateService;
   const observerGroup = `chalnak-ci-dlq-${randomUUID()}`;
   const clients: Consumer[] = [];
   const deadLetters: KafkaMessage[] = [];
@@ -141,6 +145,7 @@ describe.skipIf(!broker)('bid recovery with real Kafka and PostgreSQL', () => {
 
   beforeEach(async () => {
     fixture = undefined;
+    processingState = new BidProcessingStateService();
     crashes = [];
     deliveries = [];
     const now = Date.now();
@@ -177,7 +182,7 @@ describe.skipIf(!broker)('bid recovery with real Kafka and PostgreSQL', () => {
   }, 60000);
 
   async function startConsumer() {
-    runner = new ConsumerClass(wire, business);
+    runner = new ConsumerClass(wire, business, processingState);
     await runner.onModuleInit();
   }
 
@@ -297,6 +302,9 @@ describe.skipIf(!broker)('bid recovery with real Kafka and PostgreSQL', () => {
     expect(await snapshot()).toEqual({ amount: '1000', bidder: fixture!.bidderUuid, bids: 1, outbox: 1 });
     expect(await head()).toBe(String(BigInt(offset) + 1n));
     expect(crashes).toEqual([]);
+    const status = await new BidProcessingStatusService(new KafkaBidBrokerAdapter(config), processingState).get();
+    expect(status).toMatchObject({ broker: 'available', groupState: 'Stable', lag: '0', retentionGap: false });
+    expect(status.lastAcknowledgedAt).not.toBeNull();
   }, 60000);
 
   it('restarts a real consumer and redelivers an isolated rewound record without duplicating writes', async () => {
@@ -339,6 +347,10 @@ describe.skipIf(!broker)('bid recovery with real Kafka and PostgreSQL', () => {
     await progressed(offset);
     expect(message!.key!.toString()).toBe(`${inputTopic}-0-${offset}`);
     expect(JSON.parse(message!.value!.toString()).error).toMatch(/uuid/i);
+    const status = await new BidProcessingStatusService(new KafkaBidBrokerAdapter(config), processingState).get();
+    expect(status.broker).toBe('available');
+    expect(BigInt(status.dlqRetained!)).toBeGreaterThan(0n);
+    expect(status.lastError?.code).toBe('BID_PROCESSING_FAILED');
     expect(await snapshot()).toEqual({ amount: '0', bidder: null, bids: 0, outbox: 0 });
   }, 60000);
 

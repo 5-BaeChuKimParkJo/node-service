@@ -10,6 +10,7 @@ import type { AuctionEtcFn } from './auction-etc.fn';
 import { AuctionEtcRepository } from './auction-etc.repository';
 import { AuctionEtcService } from './auction-etc.service';
 import { AuctionServiceBidderCreatedConsumer } from './auction-service-bidder-created.consumer';
+import { BidProcessingStateService } from '../bid-monitoring/application/service/bid-processing-state.service';
 import { requireTestDatabaseUrl } from '../../../../scripts/test-database.mjs';
 
 vi.mock('@app/common/kafka/kafka.service', () => ({ KafkaService: class KafkaService {} }));
@@ -153,7 +154,11 @@ describe.skipIf(!url)('bid recovery on isolated PostgreSQL', () => {
         },
       }),
     };
-    const consumer = new AuctionServiceBidderCreatedConsumer(kafka as unknown as KafkaService, service);
+    const consumer = new AuctionServiceBidderCreatedConsumer(
+      kafka as unknown as KafkaService,
+      service,
+      new BidProcessingStateService(),
+    );
     await consumer.onModuleInit();
     const batch = {
       topic: 'auction-service.bidder.created',
