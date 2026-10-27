@@ -187,4 +187,32 @@ describe('AuctionServiceBidderCreatedConsumer recovery', () => {
     await h.service.onModuleDestroy();
     expect(h.consumer.disconnect).toHaveBeenCalledTimes(1);
   });
+
+  it('captures the failed batch scope without changing quarantine or commit order', async () => {
+    const h = await harness('not json', '9007199254740993');
+    await h.deliver();
+    expect(h.trace).toEqual(['dlq', 'commit', 'resolve']);
+    expect(h.state.snapshot().lastError).toMatchObject({
+      code: 'BID_PROCESSING_FAILED',
+      context: {
+        topic: h.batch.topic,
+        partition: 0,
+        firstOffset: '9007199254740993',
+        lastOffset: '9007199254740993',
+      },
+    });
+  });
+  it('retains the commit retry error even when optional batch metadata cannot be read', async () => {
+    const h = await harness();
+    h.consumer.commitOffsets.mockRejectedValue(new Error('fixture commit error'));
+    h.batch.firstOffset = () => {
+      throw new Error('metadata unavailable');
+    };
+    await expect(h.deliver()).rejects.toMatchObject({
+      retriable: true,
+      message: 'Bid offset acknowledgement failed; restart from broker offsets',
+    });
+    expect(h.kafka.send).not.toHaveBeenCalled();
+    expect(h.state.snapshot().lastError).toMatchObject({ code: 'OFFSET_COMMIT_FAILED', context: null });
+  });
 });

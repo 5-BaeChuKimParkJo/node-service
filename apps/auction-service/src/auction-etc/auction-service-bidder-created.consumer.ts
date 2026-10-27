@@ -6,6 +6,7 @@ import { auctionServiceBidderCreatedSchema } from '../auction/adapter/in/messagi
 import { AuctionBidCreatedEventMapper } from '../auction/adapter/in/messaging/mapper/auction-bid-created-event.mapper';
 import { AuctionEtcService } from './auction-etc.service';
 import { BidProcessingStateService } from '../bid-monitoring/application/service/bid-processing-state.service';
+import type { BidErrorCode, BidFailureContext } from '../bid-monitoring/application/model/bid-processing-status.result';
 
 @Injectable()
 export class AuctionServiceBidderCreatedConsumer implements OnModuleInit, OnModuleDestroy {
@@ -30,6 +31,23 @@ export class AuctionServiceBidderCreatedConsumer implements OnModuleInit, OnModu
       .map((dto) => AuctionBidCreatedEventMapper.toCommand(dto));
   };
 
+  private observeFailure(code: BidErrorCode, batch: Batch): void {
+    let context: BidFailureContext | undefined;
+    try {
+      const firstOffset = batch.firstOffset();
+      if (firstOffset !== null)
+        context = {
+          topic: batch.topic,
+          partition: batch.partition,
+          firstOffset,
+          lastOffset: batch.lastOffset(),
+        };
+    } catch {
+      /* Optional telemetry must not interrupt recovery. */
+    }
+    this.processingState.recordError(code, context);
+  }
+
   private commit = async (batch: Batch, resolveOffset: (offset: string) => void) => {
     const lastOffset = BigInt(batch.lastOffset()) + 1n;
     try {
@@ -37,7 +55,7 @@ export class AuctionServiceBidderCreatedConsumer implements OnModuleInit, OnModu
         { topic: batch.topic, partition: batch.partition, offset: String(lastOffset) },
       ]);
     } catch {
-      this.processingState.recordError('OFFSET_COMMIT_FAILED');
+      this.observeFailure('OFFSET_COMMIT_FAILED', batch);
       this.logger.error(`Bid offset acknowledgement failed: ${batch.topic}/${batch.partition}/${batch.lastOffset()}`);
       throw new KafkaJSError('Bid offset acknowledgement failed; restart from broker offsets', { retriable: true });
     }
@@ -78,11 +96,11 @@ export class AuctionServiceBidderCreatedConsumer implements OnModuleInit, OnModu
           const parsed = this.parseMessages(batch.messages);
           await this.auctionEtcService.bidAuctionBatch(parsed);
         } catch (error) {
-          this.processingState.recordError('BID_PROCESSING_FAILED');
+          this.observeFailure('BID_PROCESSING_FAILED', batch);
           try {
             await this.sendDlq(batch, error);
           } catch {
-            this.processingState.recordError('DLQ_PUBLICATION_FAILED');
+            this.observeFailure('DLQ_PUBLICATION_FAILED', batch);
             this.logger.error(
               `Bid quarantine publication failed: ${batch.topic}/${batch.partition}/${batch.lastOffset()}`,
             );

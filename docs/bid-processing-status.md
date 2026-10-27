@@ -32,3 +32,17 @@ proof of no errors. Current deployment uses one Auction replica.
 The status UI is on administrator Overview. Reuse Kafka UI for detailed broker
 investigation, and the bid recovery runbook for deliberate replay. This endpoint
 is not an alerting, durable audit or automated recovery system.
+
+## Recent failure details
+
+The nullable `lastError.context` adds only topic, partition and inclusive
+firstOffset/lastOffset strings for the most recently failed batch. Values are
+validated and copied before storage and on snapshot; no raw message, member ID,
+request ID or exception text is included. Missing/invalid metadata leaves context
+null without changing processing, quarantine or acknowledgement behavior.
+
+Overview has an expandable recent-failure section with fixed stage guidance.
+A commit acknowledgement error may follow a successful DB write or DLQ publish;
+inspect persisted data and broker progress before taking another action. The
+range identifies a batch, not an individual failed bid. Old responses with absent
+context remain usable. This observation is lost when the process restarts.

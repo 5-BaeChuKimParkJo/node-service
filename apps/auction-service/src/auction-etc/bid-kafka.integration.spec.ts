@@ -351,6 +351,12 @@ describe.skipIf(!broker)('bid recovery with real Kafka and PostgreSQL', () => {
     expect(status.broker).toBe('available');
     expect(BigInt(status.dlqRetained!)).toBeGreaterThan(0n);
     expect(status.lastError?.code).toBe('BID_PROCESSING_FAILED');
+    expect(status.lastError?.context).toEqual({
+      topic: inputTopic,
+      partition: 0,
+      firstOffset: offset,
+      lastOffset: offset,
+    });
     expect(await snapshot()).toEqual({ amount: '0', bidder: null, bids: 0, outbox: 0 });
   }, 60000);
 

@@ -1,8 +1,9 @@
 export type BidErrorCode = 'BID_PROCESSING_FAILED' | 'DLQ_PUBLICATION_FAILED' | 'OFFSET_COMMIT_FAILED';
+export type BidFailureContext = { topic: string; partition: number; firstOffset: string; lastOffset: string };
 export type BidProcessingHistory = {
   startedAt: string;
   lastAcknowledgedAt: string | null;
-  lastError: { code: BidErrorCode; occurredAt: string } | null;
+  lastError: { code: BidErrorCode; occurredAt: string; context: BidFailureContext | null } | null;
 };
 export type BidBrokerSnapshot = {
   groupState: string;
