@@ -78,7 +78,10 @@ describe('AuctionPrismaAdapter managed demo transaction', () => {
       aggregateId: '50000000-0000-4000-8000-000000000001',
     });
     expect(event.payload).not.toHaveProperty('demoTemplateUuid');
-    expect(result.status === 'created' && result.auction.getSnapshot()).not.toHaveProperty('demoTemplateUuid');
+    expect(result.status === 'created' && result.auction.getSnapshot()).toHaveProperty(
+      'demoTemplateUuid',
+      templateUuid,
+    );
   });
 
   it('returns promptly without a write when another run owns the lock', async () => {

@@ -12,6 +12,9 @@ class AuctionImageResponse {
 }
 
 export class AuctionResponse {
+  @ApiProperty({ type: Boolean })
+  isDemo!: boolean;
+
   @ApiProperty({ type: String })
   auctionUuid!: string;
 

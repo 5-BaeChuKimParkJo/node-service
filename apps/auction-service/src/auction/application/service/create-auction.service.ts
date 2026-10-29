@@ -34,19 +34,19 @@ export class CreateAuctionService extends CreateAuctionUseCase {
     user: User,
     context: DemoAuctionCreationCommand,
   ): Promise<DemoAuctionCreationResult> => {
-    const auction = await this.validate(command, user);
+    const auction = await this.validate(command, user, true);
     const result = await this.auctionRepositoryPort.createDemoAuction(auction, context);
     if (result.status !== 'created') return result;
     return { status: 'created', auction: await this.toResult(result.auction) };
   };
 
-  private async validate(command: CreateAuctionCommand, user: User): Promise<NewAuction> {
+  private async validate(command: CreateAuctionCommand, user: User, demo = false): Promise<NewAuction> {
     await this.taxonomyService.validateSelection(command.categoryId, command.tagIds);
     const keys = command.images.map((image) => image.key);
     keys.forEach((key) => assertOwnedAuctionImageKey(key, user.memberUuid));
     await Promise.all(keys.map((key) => this.auctionFileStoragePort.checkFileExists({ key })));
 
-    return new NewAuction(command, user);
+    return demo ? NewAuction.forDemo(command, user) : new NewAuction(command, user);
   }
 
   private async toResult(auction: Auction): Promise<CreateAuctionResult> {

@@ -1,4 +1,3 @@
-import { isTimeTruncated } from '@app/common/utils/date.utils';
 import { z } from 'zod';
 
 export const auctionAdminPropsSchema = z
@@ -14,12 +13,8 @@ export const auctionAdminPropsSchema = z
     minimumBid: z.bigint(),
     currentBid: z.bigint(),
     currentBidderUuid: z.string().uuid({ message: 'UUID의 형식이 올바르지 않습니다.' }).nullable(),
-    startAt: z.date().refine(isTimeTruncated, {
-      message: '경매 시작시각은 정각이어야 합니다.',
-    }),
-    endAt: z.date().refine(isTimeTruncated, {
-      message: '경매 종료시각은 정각이어야 합니다.',
-    }),
+    startAt: z.date(),
+    endAt: z.date(),
     soldAt: z.date().nullable(),
     isDirectDeal: z.boolean(),
     directDealLocation: z.string().nullable(),

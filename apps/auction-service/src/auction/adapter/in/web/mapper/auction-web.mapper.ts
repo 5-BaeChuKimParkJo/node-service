@@ -13,6 +13,7 @@ export class AuctionWebMapper {
 
   static fromResponse = (response: AuctionResult): AuctionResponse => {
     return {
+      isDemo: response.isDemo === true,
       auctionUuid: response.auctionUuid,
       categoryId: response.categoryId,
       categoryName: response.categoryName,

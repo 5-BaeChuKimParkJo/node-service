@@ -45,7 +45,7 @@ describe('DemoAuctionController HTTP contract', () => {
     const response = await app.inject({ method: 'POST', url: path, headers, payload: {} });
     expect(response.statusCode).toBe(201);
     expect(response.json()).toEqual(result);
-    expect(create).toHaveBeenCalledWith();
+    expect(create).toHaveBeenCalledWith(expect.any(Date), 1440);
     expect(create).toHaveBeenCalledTimes(1);
   });
 
@@ -79,4 +79,19 @@ describe('DemoAuctionController HTTP contract', () => {
     expect(response.statusCode).toBe(400);
     expect(create).not.toHaveBeenCalled();
   });
+
+  it.each([5, 30, 1440])('accepts only the selected numeric duration %i', async (durationMinutes) => {
+    const response = await app.inject({ method: 'POST', url: path, headers, payload: { durationMinutes } });
+    expect(response.statusCode).toBe(201);
+    expect(create).toHaveBeenCalledWith(expect.any(Date), durationMinutes);
+  });
+
+  it.each([null, '5', 5.5, 0, -5, 60, true, {}, []])(
+    'rejects invalid duration %j before creation',
+    async (durationMinutes) => {
+      const response = await app.inject({ method: 'POST', url: path, headers, payload: { durationMinutes } });
+      expect(response.statusCode).toBe(400);
+      expect(create).not.toHaveBeenCalled();
+    },
+  );
 });

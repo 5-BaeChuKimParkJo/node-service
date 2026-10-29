@@ -21,6 +21,6 @@ export class AuctionService extends AuctionUseCase {
     const response = this.auctionMapper.toResponse(row);
     const taxonomy = await this.taxonomyService.resolveNames(response.categoryId, response.tagIds);
 
-    return { ...response, ...taxonomy };
+    return { ...response, ...taxonomy, isDemo: Boolean(row.getSnapshot().demoTemplateUuid) };
   };
 }

@@ -6,6 +6,9 @@ import { AuctionMapper } from '../mapper/auction.mapper';
 import { CreateAuctionCommand } from '../model/create-auction.command';
 import NewAuction from '../../domain/model/new-auction';
 import Auction from '../../domain/model/auction';
+import { AuctionService } from './auction.service';
+import { AuctionWebMapper } from '../../adapter/in/web/mapper/auction-web.mapper';
+import AuctionUpdate from '../../domain/model/auction-update';
 
 const sellerUuid = '20000000-0000-4000-8000-000000000001';
 const key = `${sellerUuid}_30000000-0000-4000-8000-000000000001.webp`;
@@ -126,5 +129,44 @@ describe('CreateAuctionService demo boundary', () => {
     expect(repository.createAuction).toHaveBeenCalledTimes(1);
     expect(repository.createDemoAuction).not.toHaveBeenCalled();
     expect(repository.createAuction.mock.calls[0][0].getSnapshot()).not.toHaveProperty('demoTemplateUuid');
+  });
+
+  it.each([
+    [5, '2026-10-25T01:35:00.000Z'],
+    [30, '2026-10-25T02:00:00.000Z'],
+  ])('persists and reads a trusted %i-minute demo through real domain validation', async (_minutes, end) => {
+    const input = { ...command, startAt: context.now, endAt: new Date(end) };
+    await expect(service.executeDemo(input, user, context)).resolves.toMatchObject({
+      status: 'created',
+      auction: { startAt: context.now, endAt: new Date(end) },
+    });
+    await expect(service.execute(input, user)).rejects.toBeDefined();
+    expect(repository.createAuction).not.toHaveBeenCalled();
+  });
+
+  it.each([null, context.templateUuid])(
+    'derives a public demo boolean only from stored provenance: %s',
+    async (demoTemplateUuid) => {
+      const row = new Auction({ ...stored(new NewAuction(command, user)).getSnapshot(), demoTemplateUuid });
+      const detail = new AuctionService(
+        { findAuction: async () => row } as unknown as AuctionRepositoryPort,
+        new AuctionMapper(storage as unknown as AuctionFileStoragePort),
+        taxonomy as unknown as TaxonomyUseCase,
+      );
+      const result = AuctionWebMapper.fromResponse(
+        await detail.execute({ type: 'user', auctionUuid: row.getSnapshot().auctionUuid }),
+      );
+      expect(result.isDemo).toBe(demoTemplateUuid !== null);
+      expect(result).not.toHaveProperty('demoTemplateUuid');
+    },
+  );
+
+  it('keeps the whole-hour rule on ordinary creation and date updates even with a demo title', async () => {
+    const input = { ...command, startAt: context.now, endAt: new Date('2026-10-25T02:30:00Z') };
+    await expect(service.execute(input, user)).rejects.toBeDefined();
+    expect(
+      () => new AuctionUpdate({ auctionUuid: context.templateUuid, endAt: input.endAt }, { ...user, role: 'admin' }),
+    ).toThrow();
+    expect(repository.createAuction).not.toHaveBeenCalled();
   });
 });

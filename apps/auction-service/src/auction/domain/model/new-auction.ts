@@ -1,5 +1,5 @@
 import { add } from 'date-fns';
-import { auctionForCreatePropsSchema } from '../schema/auction-for-create.schema';
+import { auctionForCreatePropsSchema, demoAuctionForCreatePropsSchema } from '../schema/auction-for-create.schema';
 import { ErrorCode } from '@app/common/common/const';
 import { User } from '@app/common/types/user';
 import { BusinessError } from '@app/common/common/business-error';
@@ -13,7 +13,11 @@ export default class NewAuction {
   static readonly minimumBid = 1000;
   props: AuctionForCreateProps;
 
-  constructor(input: AuctionForCreateArgs, user: User) {
+  static forDemo(input: AuctionForCreateArgs, user: User): NewAuction {
+    return new NewAuction(input, user, 'demo');
+  }
+
+  constructor(input: AuctionForCreateArgs, user: User, schedule: 'standard' | 'demo' = 'standard') {
     if (input.minimumBid < NewAuction.minimumBid) {
       throw new BusinessError(
         {
@@ -38,7 +42,14 @@ export default class NewAuction {
     //   );
     // }
 
-    if (add(input.startAt, { hours: 1 }) > input.endAt) {
+    const duration = input.endAt.getTime() - input.startAt.getTime();
+    if (schedule === 'demo' && ![300000, 1800000, 86400000].includes(duration)) {
+      throw new BusinessError(
+        { message: '데모 경매는 5분, 30분 또는 24시간만 운영할 수 있습니다.', code: ErrorCode.VALIDATION_ERROR },
+        'validation',
+      );
+    }
+    if (schedule === 'standard' && add(input.startAt, { hours: 1 }) > input.endAt) {
       throw new BusinessError(
         { message: '경매 종료일은 시작일로부터 최소 1시간 이후여야 합니다.', code: ErrorCode.VALIDATION_ERROR },
         'validation',
@@ -60,7 +71,7 @@ export default class NewAuction {
       status: 'visible',
       currentBid: 0n,
     };
-    this.props = auctionForCreatePropsSchema.parse(props);
+    this.props = (schedule === 'demo' ? demoAuctionForCreatePropsSchema : auctionForCreatePropsSchema).parse(props);
   }
 
   getSnapshot = () => {

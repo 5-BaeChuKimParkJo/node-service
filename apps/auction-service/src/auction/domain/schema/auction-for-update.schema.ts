@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { auctionPropsSchema } from './auction.schema';
+import { auctionForCreatePropsSchema } from './auction-for-create.schema';
 
 export const auctionForUpdatePropsSchema = auctionPropsSchema
   .pick({
@@ -34,4 +35,5 @@ export const auctionForUpdatePropsSchema = auctionPropsSchema
       )
       .partial(),
   )
+  .merge(auctionForCreatePropsSchema.pick({ startAt: true, endAt: true }).partial())
   .strip();

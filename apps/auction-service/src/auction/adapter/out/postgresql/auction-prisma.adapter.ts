@@ -563,7 +563,7 @@ export class AuctionPrismaAdapter extends AuctionRepositoryPort {
   ): Promise<void> => {
     const prisma = tx ?? this.prisma;
     const snapshot = auction.getSnapshot();
-    const { auctionId: _, ...row } = snapshot;
+    const { auctionId: _, demoTemplateUuid: _demoTemplateUuid, ...row } = snapshot;
     const taxonomy = await this.taxonomyService.resolveNames(row.categoryId, row.tagIds);
     const auctionChangedValue: KafkaAuctionServiceOutboxTopicValue = {
       aggregateType: 'auction',

@@ -17,8 +17,8 @@ export class DemoAuctionService {
     private readonly templateUuid: string,
   ) {}
 
-  async create(now = new Date()): Promise<DemoAuctionResult> {
-    const result = await this.createWithMode('manual', now);
+  async create(now = new Date(), durationMinutes: 5 | 30 | 1440 = 1440): Promise<DemoAuctionResult> {
+    const result = await this.createWithMode('manual', now, durationMinutes);
     if (result.status !== 'created') {
       throw new AppException(
         {
@@ -43,6 +43,7 @@ export class DemoAuctionService {
   private async createWithMode(
     mode: DemoAuctionCreationCommand['mode'],
     now: Date,
+    durationMinutes: 5 | 30 | 1440 = 1440,
   ): Promise<DemoAuctionCreationResult> {
     if (!z.string().uuid().safeParse(this.templateUuid).success) {
       throw new AppException(
@@ -60,8 +61,8 @@ export class DemoAuctionService {
       );
     }
     const startAt = new Date(now);
-    startAt.setUTCMinutes(0, 0, 0);
-    const endAt = new Date(startAt.getTime() + 24 * 60 * 60 * 1000);
+    if (durationMinutes === 1440) startAt.setUTCMinutes(0, 0, 0);
+    const endAt = new Date(startAt.getTime() + durationMinutes * 60 * 1000);
     return this.creator.executeDemo(
       {
         title: `[DEMO] ${template.title.replace(demoLabel, '').trim()}`.slice(0, 100),

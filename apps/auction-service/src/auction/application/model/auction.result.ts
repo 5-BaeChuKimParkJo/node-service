@@ -5,6 +5,7 @@ type AuctionImageResult = {
 };
 
 export type AuctionResult = {
+  isDemo?: boolean;
   auctionUuid: string;
   categoryId?: number | null;
   categoryName: string | null;

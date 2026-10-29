@@ -8,6 +8,14 @@ import NewAuction from '../../../domain/model/new-auction';
 import { CreateAuctionWebMapper } from '../../in/web/mapper/create-auction-web.mapper';
 import type { CreateAuctionRequest } from '../../in/web/dto/create-auction.dto';
 import { requireTestDatabaseUrl } from '../../../../../../../scripts/test-database.mjs';
+import { CreateAuctionBidderService } from '../../../application/service/create-auction-bidder.service';
+import { AuctionService } from '../../../application/service/auction.service';
+import { AuctionMapper } from '../../../application/mapper/auction.mapper';
+import { AuctionWebMapper } from '../../in/web/mapper/auction-web.mapper';
+import { PaymentService } from '../../../../payment/application/service/payment.service';
+import { PaymentPrismaAdapter } from '../../../../payment/adapter/out/persistence/payment-prisma.adapter';
+import { PaymentProviderPort } from '../../../../payment/application/port/out/payment-provider.port';
+import { ConfigService } from '@nestjs/config';
 
 const url = process.env.TEST_DATABASE_URL ? requireTestDatabaseUrl(process.env.TEST_DATABASE_URL) : undefined;
 const now = new Date('2020-06-15T12:30:00Z');
@@ -109,6 +117,62 @@ describe.skipIf(!url)('managed demo creation on isolated PostgreSQL', () => {
   }
   const context = (mode: 'manual' | 'automatic' = 'automatic') => ({ templateUuid, mode, now });
   const children = () => database.auctions.findMany({ where: { demoTemplateUuid: templateUuid } });
+
+  it('reads and bids on a minute-scheduled demo, rejects late bids, and exposes checkout only to its winner', async () => {
+    const start = new Date(Date.now() - 60000);
+    const end = new Date(start.getTime() + 300000);
+    const bidderUuid = randomUUID();
+    const prepared = NewAuction.forDemo(
+      { ...input().getSnapshot(), startAt: start, endAt: end },
+      { memberUuid: sellerUuid, role: 'member' },
+    );
+    const result = await adapter.createDemoAuction(prepared, context('manual'));
+    expect(result.status).toBe('created');
+    const [row] = await children();
+    const detail = new AuctionService(adapter, new AuctionMapper(storage), taxonomy);
+    const response = AuctionWebMapper.fromResponse(
+      await detail.execute({ type: 'user', auctionUuid: row.auctionUuid }),
+    );
+    expect(response).toMatchObject({
+      isDemo: true,
+      startAt: start.toISOString(),
+      endAt: end.toISOString(),
+      status: 'active',
+    });
+    expect(response).not.toHaveProperty('demoTemplateUuid');
+    expect((await adapter.findAuction({ type: 'admin', auctionUuid: row.auctionUuid })).getSnapshot().endAt).toEqual(
+      end,
+    );
+    const bidder = new CreateAuctionBidderService(adapter);
+    await bidder.execute(
+      { auctionUuid: row.auctionUuid, bidAmount: 1200n },
+      { memberUuid: bidderUuid, role: 'member' },
+    );
+    expect(await database.auctionBidders.count({ where: { auctionId: row.auctionId } })).toBe(1);
+    const payment = new PaymentService(
+      new PaymentPrismaAdapter(database as PrismaService),
+      {} as PaymentProviderPort,
+      new ConfigService({ TOSS_PAYMENTS_ENABLED: true, TOSS_CLIENT_KEY: 'test_gck_fixture' }),
+    );
+    expect(await payment.get(row.auctionUuid, bidderUuid)).toMatchObject({
+      eligible: false,
+      reason: 'AUCTION_NOT_ENDED',
+    });
+    await database.auctions.update({
+      where: { auctionUuid: row.auctionUuid },
+      data: { endAt: new Date(Date.now() - 1000) },
+    });
+    await expect(
+      bidder.execute({ auctionUuid: row.auctionUuid, bidAmount: 1250n }, { memberUuid: randomUUID(), role: 'member' }),
+    ).rejects.toMatchObject({ status: 400 });
+    expect(await payment.get(row.auctionUuid, bidderUuid)).toMatchObject({ eligible: true, purchase: null });
+    await expect(payment.get(row.auctionUuid, randomUUID())).rejects.toMatchObject({ status: 403 });
+    await expect(payment.get(row.auctionUuid, sellerUuid)).rejects.toMatchObject({ status: 403 });
+    expect(await database.auctionPurchase.count({ where: { auctionUuid: row.auctionUuid } })).toBe(0);
+    const events = await database.outbox.findMany({ where: { aggregateId: row.auctionUuid } });
+    expect(events).toHaveLength(2);
+    for (const event of events) expect(event.payload).not.toHaveProperty('demoTemplateUuid');
+  });
 
   it('commits one fresh marked row with one public outbox and preserves the complete source row', async () => {
     const before = await database.auctions.findUniqueOrThrow({ where: { auctionUuid: templateUuid } });

@@ -153,4 +153,15 @@ describe('DemoAuctionService', () => {
     await expect(service().create(now)).rejects.toMatchObject({ status: 409 });
     expect(creator.executeDemo).toHaveBeenCalledTimes(1);
   });
+
+  it.each([
+    [5, '2026-10-20T09:40:00.000Z'],
+    [30, '2026-10-20T10:05:00.000Z'],
+  ])('starts a %i-minute manual demo immediately without rounding its end', async (minutes, end) => {
+    await service().create(now, minutes as 5 | 30);
+    const [command] = creator.executeDemo.mock.calls[0];
+    expect(command.startAt.toISOString()).toBe('2026-10-20T09:35:00.000Z');
+    expect(command.endAt.toISOString()).toBe(end);
+    expect(command.minimumBid).toBe(1000n);
+  });
 });

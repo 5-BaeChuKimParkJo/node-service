@@ -1,7 +1,8 @@
 import { z } from 'zod';
 import { auctionPropsSchema } from './auction.schema';
+import { isTimeTruncated } from '@app/common/utils/date.utils';
 
-export const auctionForCreatePropsSchema = auctionPropsSchema
+export const demoAuctionForCreatePropsSchema = auctionPropsSchema
   .pick({
     title: true,
     description: true,
@@ -35,3 +36,8 @@ export const auctionForCreatePropsSchema = auctionPropsSchema
     }),
   )
   .strip();
+
+export const auctionForCreatePropsSchema = demoAuctionForCreatePropsSchema.extend({
+  startAt: z.date().refine(isTimeTruncated, { message: '경매 시작시각은 정각이어야 합니다.' }),
+  endAt: z.date().refine(isTimeTruncated, { message: '경매 종료시각은 정각이어야 합니다.' }),
+});
