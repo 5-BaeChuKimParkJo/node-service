@@ -45,12 +45,12 @@ fixture browser spec, feature/release docs.
 - [x] Write auth/response/decimal/cursor tests; observe RED then implement actions.
 - [x] Implement saved state control and private list with recoverable states.
 - [x] Run frontend unit/checks/type/lint/build and real Next+fixture desktop/mobile browser tests.
-- [ ] Inspect screenshots; one independent whole-feature review; fix material findings.
+- [x] Inspect screenshots; one independent whole-feature review; fix material findings.
 
 ### Task 3: Publish and verify
 
-- [ ] Commit/push backend; verify full CI including new real PostgreSQL cases and existing Kafka.
-- [ ] Verify migration/new auction image/Argo health, then push/release frontend.
-- [ ] Verify frontend CI/image/rollout and real demo identity bookmark save/list/remove,
+- [x] Commit/push backend; verify full CI including new real PostgreSQL cases and existing Kafka.
+- [x] Verify migration/new auction image/Argo health, then push/release frontend.
+- [x] Verify frontend CI/image/rollout and real demo identity bookmark save/list/remove,
   restoring prior saved state; no live bids/payments.
-- [ ] Document proof/limits, sync GitOps, clean only this plan's scratch and checkouts.
+- [x] Document proof/limits, sync GitOps, clean only this plan's scratch and checkouts.
