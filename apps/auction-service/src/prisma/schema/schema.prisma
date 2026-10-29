@@ -59,6 +59,7 @@ model Auctions {
   auctionBidders AuctionBidders[]
   auctionImages  AuctionImages[]
   purchase       AuctionPurchase?
+  savedAuctions  SavedAuction[]
 
   @@index([demoTemplateUuid, endAt])
 }
@@ -201,4 +202,15 @@ model AuctionAdminActions {
   createdAt            DateTime @default(now()) @db.Timestamptz(6)
 
   @@index([auctionUuid, createdAt])
+}
+
+model SavedAuction {
+  savedId BigInt @id @default(autoincrement())
+  memberUuid String @db.Uuid
+  auctionUuid String @db.Uuid
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  auction Auctions @relation(fields: [auctionUuid], references: [auctionUuid], onDelete: Cascade)
+
+  @@unique([memberUuid, auctionUuid])
+  @@index([memberUuid, savedId])
 }

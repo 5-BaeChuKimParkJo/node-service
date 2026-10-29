@@ -11,6 +11,7 @@
 - Debezium → Kafka → Search Service로 검색 사본 갱신.
 - 낙찰자 전용 Toss 테스트 결제, 결과 미확정 상태 확인과 관리자 전액 취소.
 - 최근 24시간 인기 경매와 5분 주기 활성 데모 보충.
+- JWT 소유자별 [관심 경매](docs/saved-auctions.md) 저장·해제와 cursor 목록.
 
 입찰 접수는 성공 확정이 아니다. 고객 웹은 저장된 입찰 내역으로 결과를 확인한다.
 DB와 검색 간에는 비동기 지연이 있고, Kafka 전체 경로 exactly-once를 보장하지 않는다.

@@ -29,6 +29,10 @@ import { DemoAuctionService } from './application/service/demo-auction.service';
 import { DemoAuctionController } from './adapter/in/web/demo-auction.controller';
 import { AuctionRepositoryPort } from './application/port/out/auction-repository.port';
 import { CreateAuctionUseCase } from './application/port/in/create-auction.use-case';
+import { SavedAuctionsController } from './adapter/in/web/saved-auctions.controller';
+import { SavedAuctionService } from './application/service/saved-auction.service';
+import { SavedAuctionRepositoryPort } from './application/port/out/saved-auction-repository.port';
+import { SavedAuctionPrismaAdapter } from './adapter/out/postgresql/saved-auction-prisma.adapter';
 
 @Module({
   providers: [
@@ -44,6 +48,8 @@ import { CreateAuctionUseCase } from './application/port/in/create-auction.use-c
       inject: [AuctionRepositoryPort, CreateAuctionUseCase, ConfigService],
     },
     AdminHistoryService,
+    SavedAuctionService,
+    { provide: SavedAuctionRepositoryPort, useClass: SavedAuctionPrismaAdapter },
     { provide: AdminHistoryQueryPort, useClass: AdminHistoryPrismaAdapter },
     PopularAuctionService,
     PopularAuctionScheduler,
@@ -53,6 +59,7 @@ import { CreateAuctionUseCase } from './application/port/in/create-auction.use-c
   ],
   controllers: [
     PopularAuctionsController,
+    SavedAuctionsController,
     AuctionController,
     AuctionMediaController,
     AuctionAdminController,
