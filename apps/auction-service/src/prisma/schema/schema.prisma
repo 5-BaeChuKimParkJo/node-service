@@ -62,6 +62,7 @@ model Auctions {
   savedAuctions  SavedAuction[]
 
   @@index([demoTemplateUuid, endAt])
+  @@index([sellerUuid, createdAt, auctionId])
 }
 
 enum AuctionPurchaseStatus {
