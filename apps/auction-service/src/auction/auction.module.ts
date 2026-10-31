@@ -37,6 +37,10 @@ import { MySalesController } from './adapter/in/web/my-sales.controller';
 import { MySalesService } from './application/service/my-sales.service';
 import { MySalesQueryPort } from './application/port/out/my-sales-query.port';
 import { MySalesPrismaAdapter } from './adapter/out/postgresql/my-sales-prisma.adapter';
+import { SellerAuctionController } from './adapter/in/web/seller-auction.controller';
+import { SellerAuctionService } from './application/service/seller-auction.service';
+import { SellerAuctionPort } from './application/port/out/seller-auction.port';
+import { SellerAuctionPrismaAdapter } from './adapter/out/postgresql/seller-auction-prisma.adapter';
 
 @Module({
   providers: [
@@ -54,6 +58,8 @@ import { MySalesPrismaAdapter } from './adapter/out/postgresql/my-sales-prisma.a
     AdminHistoryService,
     SavedAuctionService,
     MySalesService,
+    SellerAuctionService,
+    { provide: SellerAuctionPort, useClass: SellerAuctionPrismaAdapter },
     { provide: MySalesQueryPort, useClass: MySalesPrismaAdapter },
     { provide: SavedAuctionRepositoryPort, useClass: SavedAuctionPrismaAdapter },
     { provide: AdminHistoryQueryPort, useClass: AdminHistoryPrismaAdapter },
@@ -67,6 +73,7 @@ import { MySalesPrismaAdapter } from './adapter/out/postgresql/my-sales-prisma.a
     PopularAuctionsController,
     SavedAuctionsController,
     MySalesController,
+    SellerAuctionController,
     AuctionController,
     AuctionMediaController,
     AuctionAdminController,

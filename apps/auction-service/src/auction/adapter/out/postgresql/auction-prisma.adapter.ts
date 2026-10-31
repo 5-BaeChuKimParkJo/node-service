@@ -19,7 +19,7 @@ import NewBid from '../../../domain/model/new-bid';
 import AuctionBid from '../../../domain/model/auction-bid';
 import { ErrorCode } from '@app/common/common/const';
 import { AppException } from '@app/common/common/app.exception';
-import { KafkaAuctionServiceOutboxTopicValue } from '@app/common/schema/kafka-auction-service-outbox-topic.schema';
+import { writeAuctionOutbox } from './auction-outbox';
 import { AuctionCommand } from '../../../application/model/auction.command';
 import { AuctionAdminCommand } from '../../../application/model/auction-admin.command';
 import { AuctionAdminBidsCommand } from '../../../application/model/auction-admin-bids.command';
@@ -561,30 +561,7 @@ export class AuctionPrismaAdapter extends AuctionRepositoryPort {
     op: 'c' | 'u' | 'd',
     tx?: Prisma.TransactionClient,
   ): Promise<void> => {
-    const prisma = tx ?? this.prisma;
-    const snapshot = auction.getSnapshot();
-    const { auctionId: _, demoTemplateUuid: _demoTemplateUuid, ...row } = snapshot;
-    const taxonomy = await this.taxonomyService.resolveNames(row.categoryId, row.tagIds);
-    const auctionChangedValue: KafkaAuctionServiceOutboxTopicValue = {
-      aggregateType: 'auction',
-      aggregateId: snapshot.auctionUuid,
-      eventType: op === 'c' ? 'AuctionCreated' : op === 'u' ? 'AuctionUpdated' : 'AuctionDeleted',
-      op,
-      payload: {
-        ...row,
-        ...taxonomy,
-        currentBid: toNumber(row.currentBid),
-        minimumBid: toNumber(row.minimumBid),
-        viewCount: toNumber(row.viewCount),
-        thumbnailUrl: this.s3Service.toFullUrl(row.thumbnailKey),
-        images: snapshot.images.map((image) => ({
-          ...image,
-          auctionImageId: toNumber(image.auctionImageId),
-          url: this.s3Service.toFullUrl(image.key),
-        })),
-      },
-    };
-    await prisma.outbox.create({ data: auctionChangedValue });
+    await writeAuctionOutbox(auction, op, tx ?? this.prisma, this.taxonomyService, this.s3Service);
   };
 
   override createAuctionViewedBulk = async (

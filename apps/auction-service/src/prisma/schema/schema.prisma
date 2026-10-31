@@ -60,6 +60,7 @@ model Auctions {
   auctionImages  AuctionImages[]
   purchase       AuctionPurchase?
   savedAuctions  SavedAuction[]
+  sellerActions AuctionSellerAction[]
 
   @@index([demoTemplateUuid, endAt])
   @@index([sellerUuid, createdAt, auctionId])
@@ -214,4 +215,19 @@ model SavedAuction {
 
   @@unique([memberUuid, auctionUuid])
   @@index([memberUuid, savedId])
+}
+
+model AuctionSellerAction {
+  actionUuid String @id @default(uuid()) @db.Uuid
+  auctionUuid String @db.Uuid
+  sellerUuid String @db.Uuid
+  action String
+  reasonCode String?
+  reasonDetail String?
+  beforeSnapshot Json
+  afterSnapshot Json
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  auction Auctions @relation(fields: [auctionUuid], references: [auctionUuid])
+
+  @@index([auctionUuid, createdAt])
 }

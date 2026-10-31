@@ -25,6 +25,7 @@ try {
       'apps/auction-service/src/auction/adapter/out/postgresql/demo-auction-prisma.integration.spec.ts',
       'apps/auction-service/src/auction/adapter/out/postgresql/saved-auction-prisma.integration.spec.ts',
       'apps/auction-service/src/auction/adapter/out/postgresql/my-sales-prisma.integration.spec.ts',
+      'apps/auction-service/src/auction/adapter/out/postgresql/seller-auction-prisma.integration.spec.ts',
       'apps/auction-service/src/auction-etc/bid-recovery.integration.spec.ts',
     ]);
   }

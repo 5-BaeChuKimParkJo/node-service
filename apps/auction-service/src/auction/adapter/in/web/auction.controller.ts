@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, Query, Version } from '@nestjs/common';
+import { Body, Controller, Delete, ForbiddenException, Get, Param, Post, Put, Query, Version } from '@nestjs/common';
 import { CreateAuctionUseCase } from '../../../application/port/in/create-auction.use-case';
 import { ApiBearerAuth, ApiOkResponse } from '@nestjs/swagger';
 import { JwtUser } from '@app/common/decorator/jwt-user.decorator';
@@ -100,6 +100,7 @@ export class AuctionController {
     @JwtUser() user: User,
     @Body() requestDto: UpdateAuctionRequest,
   ): Promise<UpdateAuctionResponse> {
+    if (user.role !== 'admin') throw new ForbiddenException('Use the private seller management endpoint');
     const command = UpdateAuctionWebMapper.toCommand(auctionUuid, requestDto);
     const response = await this.updateAuctionUseCase.execute(command, user);
     return UpdateAuctionWebMapper.fromResponse(response);
@@ -109,6 +110,7 @@ export class AuctionController {
   @Delete(':auctionUuid')
   @ApiBearerAuth()
   async deleteAuctionV1(@Param('auctionUuid') auctionUuid: string, @JwtUser() user: User): Promise<void> {
+    if (user.role !== 'admin') throw new ForbiddenException('Use the private seller cancellation endpoint');
     await this.deleteAuctionUseCase.execute({ auctionUuid }, user);
   }
 
