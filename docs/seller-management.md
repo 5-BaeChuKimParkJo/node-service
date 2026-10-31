@@ -52,3 +52,36 @@ Deferred Minor: protected FE rows omit current description/start-time display; A
 still supplies both. Static review did not rerun checks. Author execution and CI/live
 smoke gates are separate; no claim of load, full CDC/search recovery, comprehensive
 accessibility, or unrelated authentication/admin/payment/internal completion correctness.
+
+## CI and backend rollout · 2026-10-31
+
+Source/image `87ee91058f79072c8946f6926d91805f43ce8f9a`:
+[full CI41195598705](https://github.com/5-BaeChuKimParkJo/node-service/actions/runs/41195598705)
+passed unit459/94 guarded skips, PostgreSQL integration execution91 (90 actual database
+cases plus1 fixture-cleanup safety unit; new seller19), actual Kafka4 and four builds,
+then GHCR publishing. The new migration applied in isolated CI.
+
+Image-updater GitOps `114e22ff552ddfe0066ca4d9b7b13684f390963f` passed
+[manifest CI41195949309](https://github.com/chuman0216/cncn_private/actions/runs/41195949309).
+The exact new backend pod applied `20261031010000_seller_actions`, logged all migrations
+successful before Node startup, completed rollout and Ready/restarts0. Argo was
+Synced/Healthy; unauthenticated private seller GET returned401. Only after these gates
+did the author push FE `7dbd61374876dbf92fb3d2b84dffd50569f0978f`.
+
+Final FE `50c904815723712f17a9e165e1cf4ff168bce12e` passed
+[CI41196446695](https://github.com/5-BaeChuKimParkJo/FE-Service/actions/runs/41196446695),
+then image GitOps `cf791ef5b2dae8eafd9db4249974d898f6367e79` passed
+[manifest CI41196676120](https://github.com/chuman0216/cncn_private/actions/runs/41196676120).
+Exact frontend rollout and Argo Synced/Healthy passed. Desktop/mobile live owner reads
+covered all3 samples/history/state/overflow; buyer GET404 and legacy PUT/DELETE403
+(nonexistent UUID only) passed. Existing samples are active2/ended1 with1 bid record,
+so no live waiting form was writable. Real mutations are proven by isolated DB and
+production Next fixture16, not by altering real auctions. Financial/upload posts0.
+The live probe's user-only role assumption was corrected to the existing normal
+user/member contract after inspecting AuthSecurityAdapter and JwtUser; app auth unchanged.
+
+No new end-to-end CDC/ES replay/recovery, production load/latency/lock-duration exercise,
+broad accessibility audit, unrelated auth/admin/payment/completion certification, or
+independent rerun by the static reviewer is claimed. Operational smoke checks remain
+author evidence. Exact release choices/limits and deferred Minor are also recorded in
+FE-Service docs/seller-management.md; additive/history-preserving behavior is retained.
