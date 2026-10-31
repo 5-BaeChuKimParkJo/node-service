@@ -123,6 +123,26 @@ describe.skipIf(!url)('bid recovery on isolated PostgreSQL', () => {
     expect(await snapshot()).toEqual(first);
   });
 
+  it.each(['cancelled', 'hidden', 'deleted', 'sold', 'checkout'] as const)(
+    'rejects %s auctions inside their original bidding period',
+    async (state) => {
+      await database.auctions.update({
+        where: { auctionUuid },
+        data: {
+          ...(state === 'cancelled' || state === 'hidden' ? { status: state } : {}),
+          ...(state === 'deleted' ? { deletedAt: new Date() } : {}),
+          ...(state === 'sold' ? { soldAt: new Date() } : {}),
+          ...(state === 'checkout' ? { checkoutLockedAt: new Date() } : {}),
+        },
+      });
+      await service.bidAuctionBatch(input);
+      expect(await snapshot()).toEqual({ currentBid: 0n, currentBidderUuid: null, bids: 0, outbox: 0 });
+      expect(notifications.sendBidMessages).toHaveBeenCalledWith([
+        expect.objectContaining({ type: 'rejected-period' }),
+      ]);
+    },
+  );
+
   it('rolls back the current price and bid when the transaction cannot write its Outbox', async () => {
     vi.spyOn(repository, 'createAuctionOutbox').mockRejectedValueOnce(new Error('fixture outbox failure'));
     await expect(service.bidAuctionBatch(input)).rejects.toThrow('fixture outbox failure');

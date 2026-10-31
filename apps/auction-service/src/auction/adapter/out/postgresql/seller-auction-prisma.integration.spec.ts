@@ -158,6 +158,28 @@ describe.skipIf(!url)('seller writes on isolated PostgreSQL', () => {
     ).rejects.toMatchObject({ status: 409 });
     expect(await db.auctionSellerAction.count({ where: { auctionUuid: row.auctionUuid } })).toBe(1);
   });
+
+  it('requires correcting an existing oversized price before cancellation can emit a search-compatible event', async () => {
+    const row = await auction({ minimumBid: 2147483648n });
+    await expect(
+      adapter.change(
+        owner,
+        row.auctionUuid,
+        parseSellerAuctionChange({ version: 0, reasonCode: 'listing_error' }, 'cancel'),
+      ),
+    ).rejects.toMatchObject({ status: 409 });
+    await noWrites(row.auctionUuid);
+    await adapter.change(owner, row.auctionUuid, parseSellerAuctionChange(input(), 'update'));
+    await adapter.change(
+      owner,
+      row.auctionUuid,
+      parseSellerAuctionChange({ version: 1, reasonCode: 'listing_error' }, 'cancel'),
+    );
+    expect((await adapter.read(owner, row.auctionUuid))?.status).toBe('cancelled');
+    const events = await db.outbox.findMany({ where: { aggregateId: row.auctionUuid } });
+    expect(events).toHaveLength(2);
+    expect(events.map((event) => (event.payload as { minimumBid: number }).minimumBid)).toEqual([2500, 2500]);
+  });
   it.each([
     'started',
     'ended',

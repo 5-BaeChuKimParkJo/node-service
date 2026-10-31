@@ -117,7 +117,6 @@ export class AuctionEtcService {
         | 'rejected-duplicate'
         | 'rejected-seller';
     };
-    const now = new Date();
     const biddersWithStatus: Bidder[] = [];
     const maxBidders: { auctionUuid: string; bidderUuid: string; bidAmount: number; auctionId: number }[] = [];
     await this.prisma.$transaction(async (tx) => {
@@ -127,6 +126,7 @@ export class AuctionEtcService {
         A.uniq(Str.Eq),
       );
       const auctions = await this.auctionEtcRepository.findAuctionsForUpdate(auctionUuids, tx);
+      const now = new Date();
       const biddersByAuctionUuid = F.pipe(
         input,
         NEA.groupBy((bidder) => bidder.auctionUuid),
@@ -138,7 +138,13 @@ export class AuctionEtcService {
         if (!bidders) continue;
 
         // 입찰 가능한 기간이 아닌 경우
-        if (!(auction.startAt <= now && now <= auction.endAt)) {
+        if (
+          auction.status !== 'visible' ||
+          auction.deletedAt ||
+          auction.soldAt ||
+          auction.checkoutLockedAt ||
+          !(auction.startAt <= now && now < auction.endAt)
+        ) {
           for (const bidder of bidders) biddersWithStatus.push({ ...bidder, type: 'rejected-period', auctionId });
           continue;
         }

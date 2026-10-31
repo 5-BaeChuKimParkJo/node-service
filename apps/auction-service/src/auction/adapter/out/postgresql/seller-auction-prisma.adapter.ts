@@ -73,6 +73,8 @@ export class SellerAuctionPrismaAdapter extends SellerAuctionPort {
         >`SELECT "auctionUuid" FROM "Auctions" WHERE "auctionUuid"=${auctionUuid}::uuid AND "sellerUuid"=${memberUuid}::uuid AND "deletedAt" IS NULL FOR UPDATE`;
         if (!locked.length) throw new NotFoundException('Seller auction not found');
         const row = await tx.auctions.findUniqueOrThrow({ where: { auctionUuid }, include });
+        if (command.action === 'cancel' && (row.minimumBid < 0n || row.minimumBid > 2147483647n))
+          throw new ConflictException('Correct the starting price to 1000..2147483647 before cancellation');
         const [clock] = await tx.$queryRaw<Array<{ now: Date }>>`SELECT clock_timestamp() AS now`;
         if (
           row.version !== command.version ||

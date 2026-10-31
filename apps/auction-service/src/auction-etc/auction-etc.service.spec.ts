@@ -266,7 +266,7 @@ describe('AuctionEtcService', () => {
 
     it('본인의 경매에 입찰 한 요청(단건, 최초 입찰)이 오면 입찰에 실패해야 한다.', async () => {
       vi.useFakeTimers();
-      vi.setSystemTime(new Date('2025-01-02T00:00:00.000Z'));
+      vi.setSystemTime(new Date('2025-01-01T12:00:00.000Z'));
 
       const auctionEtcService = module.get(AuctionEtcService);
       const prisma = module.get(PrismaService);
@@ -675,7 +675,7 @@ describe('AuctionEtcService', () => {
 
     it('본인의 경매에 입찰 한 요청(단건, 최초 입찰 아님)이 오면 입찰에 실패해야 한다.', async () => {
       vi.useFakeTimers();
-      vi.setSystemTime(new Date('2025-01-02T00:00:00.000Z'));
+      vi.setSystemTime(new Date('2025-01-01T12:00:00.000Z'));
 
       const auctionEtcService = module.get(AuctionEtcService);
       const prisma = module.get(PrismaService);

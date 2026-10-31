@@ -39,6 +39,10 @@ function fixture(failTransaction = false) {
         minimumBid: 1000n,
         currentBid: 0n,
         currentBidderUuid: null,
+        status: 'visible',
+        deletedAt: null,
+        soldAt: null,
+        checkoutLockedAt: null,
       },
     ],
     createAuctionOutbox: async () => {

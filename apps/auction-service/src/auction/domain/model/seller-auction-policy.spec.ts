@@ -30,9 +30,7 @@ describe('waiting seller auction policy', () => {
       startAt: new Date('2026-11-01T02:00:00Z'),
       endAt: new Date('2026-11-02T02:00:00Z'),
     });
-    expect(parseSellerAuctionChange({ ...update(), minimumBid: '9007199254740991' }, 'update').minimumBid).toBe(
-      '9007199254740991',
-    );
+    expect(parseSellerAuctionChange({ ...update(), minimumBid: '2147483647' }, 'update').minimumBid).toBe('2147483647');
   });
   it.each([
     { sellerUuid: 'other' },
@@ -49,6 +47,7 @@ describe('waiting seller auction policy', () => {
     { minimumBid: '1e4' },
     { minimumBid: '01000' },
     { minimumBid: '9007199254740992' },
+    { minimumBid: '2147483648' },
     { startAt: '2026-11-01T11:00' },
     { startAt: '2026-11-01T02:01:00Z' },
     { endAt: '2026-11-01T02:00:00Z' },

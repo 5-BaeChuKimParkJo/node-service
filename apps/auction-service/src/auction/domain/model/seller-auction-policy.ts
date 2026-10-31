@@ -14,7 +14,7 @@ const updateSchema = z
     minimumBid: z
       .string()
       .regex(/^[1-9]\d{3,15}$/)
-      .refine((value) => BigInt(value) <= 9007199254740991n),
+      .refine((value) => BigInt(value) <= 2147483647n),
     startAt: hour,
     endAt: hour,
   })
